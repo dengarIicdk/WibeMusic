@@ -196,7 +196,7 @@ export function PlayerPage() {
       {canWave() && waveSeed && (
         <div className="px-6 pt-4">
           <Button icon="wave" block disabled={starting !== null} busy={starting === seedKey(waveSeed)} onClick={() => void startWave(waveSeed, 'player')}>
-            Моя волна по треку
+            Мой Вайб по треку
           </Button>
         </div>
       )}
@@ -207,7 +207,7 @@ export function PlayerPage() {
 }
 
 function contextLabel(context: string): string {
-  if (context.startsWith('wave:')) return 'Моя волна';
+  if (context.startsWith('wave:')) return 'Мой Вайб';
   if (context.startsWith('mix:')) return 'Микс дня';
   return (
     { album: 'Альбом', artist: 'Исполнитель', playlist: 'Плейлист', liked: 'Понравившиеся', search: 'Поиск', queue: 'Очередь' } as Record<string, string>

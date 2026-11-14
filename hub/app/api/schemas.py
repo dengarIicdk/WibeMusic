@@ -969,6 +969,7 @@ class WaveSeedIn(BaseModel):
 class WaveStartIn(BaseModel):
     seed: WaveSeedIn | None = None  # none: the user's own wave, from the taste profile
     mode: MixMode | None = None  # the familiar share, as a mix's; none — the user's mix mode
+    lang: Literal["ja", "ru", "latin"] | None = None  # only tracks written in this alphabet (by title and artist)
     # analytics only (INSIGHTS.md 6.3): where it was started (`home_card`, `track_menu`... `restart`), the client
     # ("pwa", "pwa-app", "app/<version>"), the session the app makes again after a 404
     origin: str | None = Field(default=None, max_length=32, pattern=ORIGIN_PATTERN)

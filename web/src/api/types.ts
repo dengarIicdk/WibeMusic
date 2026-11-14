@@ -1030,9 +1030,13 @@ export interface WaveSeedIn {
   by_artist?: boolean;
 }
 
+/** A wave only in one alphabet, by title and artist (`ja` kana/kanji, `ru` Cyrillic, `latin`). */
+export type WaveLang = 'ja' | 'ru' | 'latin';
+
 export interface WaveStartIn {
   seed?: WaveSeedIn | null;
   mode?: MixMode | null;
+  lang?: WaveLang | null;
   /** analytics only: where it was started (`home_card`, `catalog_card`, `track_menu`, `artist_menu`, `player`,
    * `artist_page`, `radio`, `search_file`; the app's `restart`), the client (`pwa`, `pwa-app`) */
   origin?: WaveOrigin | null;

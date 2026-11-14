@@ -28,7 +28,7 @@ export function WaveHero() {
     ['playing', 'Играет — подстраивается под каждый пропуск и ♥'],
     ['paused', 'На паузе — продолжим с того же места'],
   ];
-  const label = busy ? 'Моя волна: запускаем' : running ? 'Моя волна: пауза' : on ? 'Моя волна: продолжить' : 'Моя волна: слушать';
+  const label = busy ? 'Мой Вайб: запускаем' : running ? 'Мой Вайб: пауза' : on ? 'Мой Вайб: продолжить' : 'Мой Вайб: слушать';
 
   return (
     <div className="relative mt-1 flex h-[360px] items-center justify-center">
@@ -41,7 +41,7 @@ export function WaveHero() {
         style={{ maskImage: fade, WebkitMaskImage: fade }}
       />
       <div className="relative flex flex-col items-center text-center text-white" style={{ textShadow: '0 1px 14px rgba(0,0,0,.6)' }}>
-        <h2 className="text-2xl font-bold">Моя волна</h2>
+        <h2 className="text-2xl font-bold">Мой Вайб</h2>
         {/* A fixed-size slot: the captions cross-fade in place, so neither the title nor the button ever moves. */}
         <div className="relative mt-1 h-10 w-80 max-w-full text-sm leading-snug text-white/80">
           {captions.map(([key, text]) => (

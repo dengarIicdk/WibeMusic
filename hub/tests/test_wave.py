@@ -52,6 +52,29 @@ def profile() -> Profile:
 # --- picking --------------------------------------------------------------------------------------------------------
 
 
+def test_script_tells_the_language_by_the_alphabet() -> None:
+    from app.matching.normalize import script_of
+
+    assert script_of("Песня", "Артист") == "ru"
+    assert script_of("夜に駆ける", "YOASOBI") == "ja"
+    assert script_of("ひかり", None) == "ja"
+    assert script_of("Song", "Artist") == "latin"
+    assert script_of("123", "—") == ""
+
+
+def test_a_language_wave_hands_out_only_its_alphabet() -> None:
+    ja = [build.Cand(track=CatalogTrack(ref=f"dz:j{i}", source="dz", id=str(i), title=f"夜{i}", artist="ヨアソビ",
+                                        artists=["ヨアソビ"], duration_s=200), gens={"ytm_radio": 0}, score=5.0)
+          for i in range(3)]
+    ru = [cand(i, f"Артист {i}", score=1.0) for i in range(3)]
+    st = state(*ja, *ru)
+    st.lang = "ru"
+
+    got = wave.pick(st, profile(), "normal", {}, n=5, lang="ru")
+
+    assert got and all(wave._script(c) == "ru" for c in got)
+
+
 def test_an_artist_plays_at_most_once_in_eight_tracks() -> None:
     # 3 songs of each of 8 artists; «A» and «B» played just now
     cands = [cand(i * 10 + k, f"Арт {chr(65 + i)}", score=10 - k - i / 10) for i in range(8) for k in range(3)]

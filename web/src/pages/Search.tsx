@@ -6,7 +6,7 @@ import { TrackMenuButton } from '../components/TrackMenu';
 import { CandidateRow, fileRef } from '../components/candidate';
 import { Icon } from '../components/Icon';
 import { LikeButton } from '../components/LikeButton';
-import { WaveCard } from '../components/Wave';
+import { VibeModes } from '../components/VibeModes';
 import { Button, Empty, ErrorState, IconButton, Notice, SectionTitle, Segmented, SkeletonRows, Spinner, cx } from '../components/ui';
 import { startDownload } from '../lib/actions';
 import { useHubEvent } from '../lib/events';
@@ -105,7 +105,7 @@ export function SearchPage({ initialQuery, initialTab }: { initialQuery: string;
       {!dq ? (
         <>
           <MixCard />
-          <WaveCard />
+          <VibeModes origin="catalog_card" />
           <RecentSearches onPick={setQ} />
         </>
       ) : tab === 'catalog' ? (

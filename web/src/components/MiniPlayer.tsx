@@ -92,7 +92,7 @@ export function MiniPlayer() {
           <div className="flex items-center gap-1.5 text-[13px] leading-tight text-muted">
             {/* the preview is all there is: no source has the full track */}
             {onWave && (
-              <span title="Моя волна" className="shrink-0 text-accent">
+              <span title="Мой Вайб" className="shrink-0 text-accent">
                 <Icon name="wave" size={14} />
               </span>
             )}

@@ -1,6 +1,6 @@
 import { api } from '../api/client';
 import { Icon, type IconName } from '../components/Icon';
-import { WaveCard } from '../components/Wave';
+import { VibeModes } from '../components/VibeModes';
 import { WaveHero } from '../components/WaveHero';
 import { ErrorState, SectionTitle, Spinner } from '../components/ui';
 import { useDesktop } from '../lib/desktop';
@@ -34,7 +34,7 @@ export function HomePage() {
       ) : (
         <>
           <MixCard />
-          <WaveCard />
+          <VibeModes origin="home_card" />
         </>
       )}
       <div className="grid grid-cols-2 gap-2 px-4 pt-3 md:grid-cols-4">

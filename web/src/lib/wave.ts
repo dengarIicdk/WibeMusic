@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { ApiError, api, errorMessage } from '../api/client';
-import type { PlayEventIn, WaveOrigin, WaveOut, WaveSeedIn, WaveTrackOut } from '../api/types';
+import type { MixMode, PlayEventIn, WaveLang, WaveOrigin, WaveOut, WaveSeedIn, WaveTrackOut } from '../api/types';
 import { EMBEDDED } from './embedded';
 import { getListenState, listenAll, replaceUpcoming, type ListenTrack } from './listen';
 import { canPlayAll, canPlayWave, playWave } from './player';
@@ -139,12 +139,13 @@ function remember(s: Session, w: WaveOut) {
 
 /** Starts the user's own wave, or one from a track or an artist («Волна по треку»). `origin` — where it was started
  * (INSIGHTS.md 6.3: analytics only, the Hub keeps it with the session). */
-export async function startWave(seed: WaveSeedIn | null | undefined, origin: WaveOrigin): Promise<boolean> {
+export async function startWave(seed: WaveSeedIn | null | undefined, origin: WaveOrigin,
+  options: { mode?: MixMode; lang?: WaveLang } = {}): Promise<boolean> {
   if (starting !== null) return false;
   starting = seedKey(seed);
   emit();
   try {
-    const w = await api.waveStart({ seed: seed ?? null, origin, client: EMBEDDED ? 'pwa-app' : 'pwa' });
+    const w = await api.waveStart({ seed: seed ?? null, origin, client: EMBEDDED ? 'pwa-app' : 'pwa', mode: options.mode ?? null, lang: options.lang ?? null });
     if (!w.tracks.length) {
       toastError('Волна пока пустая: попробуйте чуть позже');
       return false;

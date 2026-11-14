@@ -95,7 +95,7 @@ function Listening({ d, userId }: { d: ListeningOut; userId: number }) {
             </p>
           </div>
           <div>
-            <div className="font-semibold">Моя волна</div>
+            <div className="font-semibold">Мой Вайб</div>
             <p className="text-muted">
               {fmtNum(wave.launches)} {plural(wave.launches, ['запуск', 'запуска', 'запусков'])}
               {wave.restarts ? ` (+${wave.restarts} ${plural(wave.restarts, ['перезапуск', 'перезапуска', 'перезапусков'])})` : ''}: {codeLine(wave.by_origin, waveOriginLabel)}

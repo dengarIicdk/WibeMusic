@@ -273,7 +273,7 @@ const codeLabel = (map: Record<string, string>, fallback?: string) => (code?: st
 
 /** What a launch played (`source`). */
 export const sourceLabel = codeLabel({
-  mix: 'Микс дня', wave: 'Моя волна', smart: 'Умное перемешивание', playlist: 'Плейлист', album: 'Альбом', artist: 'Исполнитель', liked: 'Понравившиеся',
+  mix: 'Микс дня', wave: 'Мой Вайб', smart: 'Умное перемешивание', playlist: 'Плейлист', album: 'Альбом', artist: 'Исполнитель', liked: 'Понравившиеся',
   search: 'Поиск', queue: 'Очередь', continuous: 'Продолжение похожими', library: 'Библиотека', other: 'Другое',
   unknown: 'Без контекста', scrobble: 'История Navidrome',
 }, 'Без контекста');

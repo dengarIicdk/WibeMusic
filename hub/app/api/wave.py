@@ -48,7 +48,7 @@ async def start(body: WaveStartIn | None = None, user: User = Depends(current_us
     body = body or WaveStartIn()
     try:
         b = await wave.start(user, body.seed.model_dump(exclude_none=True) if body.seed else None, body.mode,
-                             origin=body.origin, client=body.client, restart_of=body.restart_of,
+                             lang=body.lang, origin=body.origin, client=body.client, restart_of=body.restart_of,
                              request=body.model_dump(mode="json", exclude_none=True))
     except wave.WaveError as e:
         raise HTTPException(e.status, str(e)) from e

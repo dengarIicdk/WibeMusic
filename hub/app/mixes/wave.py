@@ -42,6 +42,7 @@ from app.config import get_settings
 from app.db import session_scope
 from app.jobs.queue import enqueue, notify
 from app.library.owned import ACTIVE_STATUSES
+from app.matching import normalize
 from app.matching.normalize import fingerprint
 from app.mixes import build, embedder, sources
 from app.mixes.resolve import catalog_track, library_track
@@ -140,6 +141,7 @@ class State:
     downloads: list[str] = field(default_factory=list)  # refs downloaded for the session
     gens: dict[str, Any] = field(default_factory=dict)  # generator -> {tracks, seconds, error?, off?}
     seed_artist: str | None = None  # artist key of a wave by an artist: it plays more often (`SEED_ARTIST_GAP`)
+    lang: str | None = None  # the alphabet the session keeps to (`script_of`); none — any
 
     def dump(self) -> dict[str, Any]:
         return {"version": self.version, "taste_model": self.taste_model, "seen": sorted(self.seen),
@@ -148,7 +150,7 @@ class State:
                 "played": [p.__dict__ for p in self.played], "heard": sorted(self.heard), "skips": self.skips,
                 "pos": self.pos, "neg": self.neg, "radios": self.radios, "seeds_used": self.seeds_used,
                 "started": self.started, "started_familiar": self.started_familiar, "downloads": self.downloads,
-                "gens": self.gens, "seed_artist": self.seed_artist}
+                "gens": self.gens, "seed_artist": self.seed_artist, "lang": self.lang}
 
     @classmethod
     def load(cls, d: dict[str, Any]) -> State:
@@ -160,7 +162,7 @@ class State:
                  radios=list(d.get("radios") or []), seeds_used=list(d.get("seeds_used") or []),
                  started=int(d.get("started") or 0), started_familiar=int(d.get("started_familiar") or 0),
                  downloads=list(d.get("downloads") or []), gens=dict(d.get("gens") or {}),
-                 heard=set(d.get("heard") or []), seed_artist=d.get("seed_artist"))
+                 heard=set(d.get("heard") or []), seed_artist=d.get("seed_artist"), lang=d.get("lang"))
         st.pool = {c.track.ref: c for c in map(cand_of, d.get("pool") or [])}
         st.out = {c.track.ref: c for c in map(cand_of, d.get("out") or [])}
         st.played = [Played(**p) for p in d.get("played") or []]
@@ -188,6 +190,7 @@ class Runtime:
     save: Callable[[str, Runtime], Awaitable[None]] | None = None
     download_finished: bool = True
     blocked: Callable[[build.Cand], bool] | None = None  # candidates the session never takes (its own songs...)
+    lang: str | None = None  # only tracks written in this alphabet (`script_of`), for the whole session
 
 
 _rt: dict[str, Runtime] = {}
@@ -208,6 +211,7 @@ async def _runtime(sid: str, user: User) -> Runtime:
             if row is None or row.user_id != user.id or row.updated_at < utcnow() - IDLE:
                 raise WaveError(404, "Волна закончилась: запустите новую")
             rt = Runtime(user_id=user.id, mode=row.mode, state=State.load(row.state_json or {}))
+            rt.lang = rt.state.lang
             if "seen" not in (row.state_json or {}):
                 # Legacy state has no event ledger. Preserve its already-saved learning
                 # rather than applying the old journal again when an offline client retries.
@@ -571,16 +575,22 @@ def value(c: build.Cand, st: State, vectors: dict[str, list[float]], pos: list[f
     return v
 
 
+def _script(c: build.Cand) -> str:
+    t = c.track
+    return normalize.script_of(t.title, t.artist)
+
+
 def pick(st: State, p: Profile, mode: str, vectors: dict[str, list[float]], n: int = BATCH,
          queued: set[str] = frozenset(), first: build.Cand | None = None,
-         values: dict[str, float] | None = None) -> list[build.Cand]:
+         values: dict[str, float] | None = None, lang: str | None = None) -> list[build.Cand]:
     """The next `n`: the best by `value` keeping the mode's familiar share, an artist at most once in `ARTIST_GAP`
     tracks (counting the played ones; the artist of a wave by an artist — once in `SEED_ARTIST_GAP`); with nothing else left, the gap gives way (never the same artist twice in a
     row). «Не нравится» set since the candidate came in drops it. `queued` — refs the client has ahead already.
     `values` gets the `value` of every candidate ranked, by ref (the analytics of `wave_items`)."""
     pos = _weighted_center(st.positive_weights, vectors) if st.taste_model == "v2" else _center(st.pos, vectors)
     neg = None if st.taste_model == "v2" else _center(st.neg, vectors)
-    pool = [c for c in [*st.out.values(), *st.pool.values()] if c is not first and not _disliked(c, p)]
+    pool = [c for c in [*st.out.values(), *st.pool.values()] if c is not first and not _disliked(c, p)
+            and (lang is None or _script(c) == lang)]
     vals = {id(c): value(c, st, vectors, pos, neg, c.track.ref in queued) for c in pool}
     if values is not None:
         values.update((c.track.ref, vals[id(c)]) for c in pool)
@@ -951,8 +961,8 @@ async def clear_old(s: AsyncSession, now: datetime | None = None) -> int:
     return len(rows)
 
 
-async def start(user: User, seed: dict[str, Any] | None, mode: str | None, *, origin: str | None = None,
-                client: str | None = None, restart_of: str | None = None,
+async def start(user: User, seed: dict[str, Any] | None, mode: str | None, *, lang: str | None = None,
+                origin: str | None = None, client: str | None = None, restart_of: str | None = None,
                 request: dict[str, Any] | None = None) -> Batch:
     """A new session. `origin`, `client`, `restart_of` and `request` (the start's body as it came) are kept for the
     analytics only."""
@@ -978,7 +988,7 @@ async def start(user: User, seed: dict[str, Any] | None, mode: str | None, *, or
         if profile.empty or not seeds:
             raise WaveError(409, "Волне не от чего оттолкнуться: послушайте что-нибудь или выберите исполнителей")
     sid = uuid.uuid4().hex[:16]
-    rt = Runtime(user_id=user.id, mode=mode, state=State(taste_model=cfg.taste_model), profile=profile)
+    rt = Runtime(user_id=user.id, mode=mode, state=State(taste_model=cfg.taste_model, lang=lang), profile=profile, lang=lang)
     rt.state.seeds_used = [t.key for t in seeds]
     rt.state.seed_artist = artist_key(seed_artist["name"]) if seed_artist else None
     seed_json = ({"ref": seed_track.ref, "artist": seed_track.artist, "title": seed_track.title} if seed_track
@@ -1048,7 +1058,7 @@ async def _hand_out(sid: str, rt: Runtime, queued: set[str], first: build.Cand |
                     del pool[ref]
         _session_weights(st, rt.profile)
     values: dict[str, float] = {}
-    tracks = pick(st, rt.profile, rt.mode, await _vectors(rt), queued=queued, first=first, values=values)
+    tracks = pick(st, rt.profile, rt.mode, await _vectors(rt), queued=queued, first=first, values=values, lang=rt.lang)
     for ref in list(st.out):
         st.pool[ref] = st.out.pop(ref)
     for c in tracks:

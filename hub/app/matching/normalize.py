@@ -55,6 +55,24 @@ def has_cyrillic(s: str | None) -> bool:
     return bool(s) and _CYR_RE.search(s) is not None
 
 
+_JA_RE = re.compile(r"[぀-ヿ一-鿿]")
+
+
+def script_of(*parts: str | None) -> str:
+    """The language a text is written in, by its alphabet: `ja` (kana or kanji), `ru` (Cyrillic), `latin`, or ``
+    when nothing tells (only digits and symbols)."""
+    text = " ".join(p for p in parts if p)
+    if re.search(r"[぀-ヿ]", text):
+        return "ja"
+    if _JA_RE.search(text):
+        return "ja"
+    if has_cyrillic(text):
+        return "ru"
+    if re.search(r"[A-Za-z]", text):
+        return "latin"
+    return ""
+
+
 def _prep(s: str | None) -> str:
     """NFKC, unified dashes/quotes, `ё→е`, collapsed spaces (case preserved). NFKC turns "…" into "..."."""
     s = unicodedata.normalize("NFKC", s or "").translate(_PREP_TABLE)
