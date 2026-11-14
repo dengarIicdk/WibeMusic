@@ -14,6 +14,8 @@
 | S06-T01 | S06-T01: лёгкий локальный запуск | DONE (без запуска) | S01-T01 | Optional-профили, повторяемый setup/start, конфигурация проверена; `docker compose config` — BLOCKED (нет Docker) |
 | S06-T02 | S06-T02: документация эксплуатации и Android | DONE (сверка с кодом) | S06-T01 | Инструкции соответствуют реализации; реальный запуск по инструкции — BLOCKED (нет Docker) |
 | S07-T01 | S07-T01: итоговая приёмка | ЧАСТИЧНО ПРИНЯТО | S02–S06 | Результаты и ограничения зафиксированы; сборка проходит; реальная проверка стека, браузера и телефона — BLOCKED (нет Docker) |
+| S08-T01 | S08-T01: широкие подборки каталога | DONE (автотесты; UI auth-blocked) | S07 | Read-only Deezer API, похожие исполнители, радио, жанры, редакционные подборки и публичные плейлисты; backend suite и frontend build проходят |
+| S09-T01 | S09-T01: запуск и GitHub-сборки WibeMusic | DONE (EXE проверен установкой; Android — только CI) | S08-T01 | Понятный Windows quick start; production web включён в установщик; GitHub Actions проверяет Hub/web и собирает Windows installer и Android APK при push в master |
 
 ## Карта возможностей
 

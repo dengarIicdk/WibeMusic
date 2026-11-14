@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { AlbumOut } from '../api/types';
-import { ReleaseCard, TrackRow } from '../components/catalog';
+import { ArtistBubble, ReleaseCard, TrackRow, playAll } from '../components/catalog';
 import { LikeButton } from '../components/LikeButton';
 import { Button, Cover, ErrorState, IconButton, Loading, SectionTitle } from '../components/ui';
 import { startDownload } from '../lib/actions';
@@ -14,6 +14,13 @@ import { canWave, seedKey, startWave, useWave } from '../lib/wave';
 
 export function ArtistPage({ refId }: { refId: string }) {
   const res = useAsync((s) => api.artist(refId, s), [refId]);
+  const related = useAsync((s) => api.artistRelated(refId, s), [refId], refId.startsWith('dz:'));
+  const radio = useAsync((s) => api.artistRadio(refId, s), [refId], refId.startsWith('dz:'));
+  useEffect(() => {
+    const tracks = radio.data;
+    if (!tracks?.length) return;
+    void api.listenPrefetch(tracks.slice(0, 10).map((t) => t.ref)).catch(() => undefined);
+  }, [radio.data]);
   const [showAllTop, setShowAllTop] = useState(false);
   const [busyRef, setBusyRef] = useState<string | null>(null);
   const [allBusy, setAllBusy] = useState(false);
@@ -110,6 +117,30 @@ export function ArtistPage({ refId }: { refId: string }) {
           )}
         </section>
       )}
+
+      {radio.data?.length ? (
+        <section aria-label="Радио исполнителя">
+          <SectionTitle>Радио исполнителя</SectionTitle>
+          <div className="mx-4 mb-2 flex items-center justify-between rounded-xl bg-surface px-4 py-3">
+            <div className="min-w-0"><div className="font-medium">Микс на основе {artist.name}</div><div className="text-xs text-muted">Радио исполнителя · {radio.data.length} треков</div></div>
+            <Button icon="play" variant="primary" small onClick={() => playAll(radio.data!, { context: `artist-radio:${artist.ref}` })}>Слушать</Button>
+          </div>
+          {radio.data.slice(0, 8).map((t, i) => <TrackRow key={t.ref} track={t} number={i + 1} showAlbum queue={radio.data} />)}
+        </section>
+      ) : radio.error ? (
+        <section><SectionTitle>Радио исполнителя</SectionTitle><p className="px-4 text-sm text-muted">Не удалось загрузить радио. <button className="text-accent underline" onClick={() => radio.reload()}>Повторить</button></p></section>
+      ) : null}
+
+      {related.data?.length ? (
+        <section aria-label="Похожие исполнители">
+          <SectionTitle>Похожие исполнители</SectionTitle>
+          <div className="flex gap-4 overflow-x-auto px-4 pb-2 pt-1">
+            {related.data.slice(0, 20).map((a) => <ArtistBubble key={a.ref} artist={a} />)}
+          </div>
+        </section>
+      ) : related.error ? (
+        <section><SectionTitle>Похожие исполнители</SectionTitle><p className="px-4 text-sm text-muted">Не удалось загрузить похожих исполнителей. <button className="text-accent underline" onClick={() => related.reload()}>Повторить</button></p></section>
+      ) : null}
 
       {groups.map(([title, list]) =>
         list.length ? (

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { ApiError, api, errorMessage } from '../api/client';
+import { ApiError, api } from '../api/client';
 import type { MixMode, PlayEventIn, WaveLang, WaveOrigin, WaveOut, WaveSeedIn, WaveTrackOut } from '../api/types';
 import { EMBEDDED } from './embedded';
 import { getListenState, listenAll, replaceUpcoming, type ListenTrack } from './listen';
@@ -27,6 +27,9 @@ export function canWave(): boolean {
 }
 
 const RETRY_MS = 4000;
+
+/** The title the Hub gives every wave (the visible name is «Мой Вайб»). */
+export const WAVE_TITLE = 'Моя волна';
 
 interface Session {
   id: string;
@@ -75,7 +78,7 @@ export function restoreWave(account: number | null) {
     let saved: { id?: string; title?: string; refs?: string[]; songs?: string[]; pending?: PlayEventIn[] } | null = null;
     try { saved = JSON.parse(localStorage.getItem(SESSION_KEY + account) ?? 'null'); } catch { /* rebuild from the queue */ }
     if (saved?.id !== id) saved = null;
-    session = { id, title: typeof saved?.title === 'string' ? saved.title : 'Моя волна', context: st.context,
+    session = { id, title: typeof saved?.title === 'string' ? saved.title : WAVE_TITLE, context: st.context,
       refs: new Set([...(Array.isArray(saved?.refs) ? saved.refs.filter((r) => typeof r === 'string') : []), ...st.queue.map((t) => t.ref)]),
       songs: new Set(Array.isArray(saved?.songs) ? saved.songs.filter((r) => typeof r === 'string') : []),
       pending: Array.isArray(saved?.pending) ? saved.pending.filter((e) => e && typeof e.event_id === 'string') : [],
@@ -145,7 +148,25 @@ export async function startWave(seed: WaveSeedIn | null | undefined, origin: Wav
   starting = seedKey(seed);
   emit();
   try {
-    const w = await api.waveStart({ seed: seed ?? null, origin, client: EMBEDDED ? 'pwa-app' : 'pwa', mode: options.mode ?? null, lang: options.lang ?? null });
+    const body = { origin, client: EMBEDDED ? 'pwa-app' : 'pwa', mode: options.mode ?? null, lang: options.lang ?? null };
+    let w: WaveOut;
+    try {
+      w = await api.waveStart({ ...body, seed: seed ?? null });
+    } catch (e) {
+      // A new account has no history yet: the wave starts from a chart artist instead.
+      if (seed || !(e instanceof ApiError) || e.status !== 409) throw e;
+      const charts = (await api.tasteOnboarding()).suggestions.filter((a) => a.ref.startsWith('dz:')).slice(0, 5);
+      let found: WaveOut | null = null;
+      for (const chart of charts) {
+        const next = await api.waveStart({ ...body, seed: { artist_ref: chart.ref } });
+        if (next.tracks.length) {
+          found = next;
+          break;
+        }
+      }
+      if (!found) throw e;
+      w = found;
+    }
     if (!w.tracks.length) {
       toastError('Волна пока пустая: попробуйте чуть позже');
       return false;
@@ -163,7 +184,7 @@ export async function startWave(seed: WaveSeedIn | null | undefined, origin: Wav
     session = s;
     return true;
   } catch (e) {
-    toastError(errorMessage(e));
+    toastError(e);
     return false;
   } finally {
     starting = null;

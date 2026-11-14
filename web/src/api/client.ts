@@ -6,6 +6,10 @@ import type {
   AlbumOut,
   AlbumPatchIn,
   ArtistPageOut,
+  CatalogArtist,
+  CatalogGenresOut,
+  CatalogPlaylistOut,
+  GenrePlaylistsOut,
   AssistantConfirmIn,
   AssistantTaskOut,
   ChatBriefOut,
@@ -60,6 +64,7 @@ import type {
   StarOut,
   StarredOut,
   TasteOnboardingOut,
+  TrackOut,
   TrackPatchIn,
   TracksMoveIn,
   UploadCommitIn,
@@ -265,6 +270,15 @@ export const api = {
     cachedGet<ProviderSearchOut>(withQuery('/api/search/providers', { q, group }), signal),
   artist: (ref: string, signal?: AbortSignal, fresh = false) =>
     cachedGet<ArtistPageOut>(`/api/catalog/artist/${enc(ref)}`, signal, fresh),
+  artistRelated: (ref: string, signal?: AbortSignal) =>
+    cachedGet<CatalogArtist[]>(`/api/catalog/artist/${enc(ref)}/related`, signal),
+  artistRadio: (ref: string, signal?: AbortSignal) =>
+    cachedGet<TrackOut[]>(`/api/catalog/artist/${enc(ref)}/radio`, signal),
+  catalogGenres: (signal?: AbortSignal) => cachedGet<CatalogGenresOut>('/api/catalog/genres', signal),
+  genrePlaylists: (id: string, signal?: AbortSignal) =>
+    cachedGet<GenrePlaylistsOut>(`/api/catalog/genres/${enc(id)}/playlists`, signal),
+  catalogPlaylist: (ref: string, signal?: AbortSignal) =>
+    cachedGet<CatalogPlaylistOut>(`/api/catalog/playlist/${enc(ref)}`, signal),
   album: (ref: string, signal?: AbortSignal, fresh = false) =>
     cachedGet<AlbumOut>(`/api/catalog/album/${enc(ref)}`, signal, fresh),
 

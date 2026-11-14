@@ -1,0 +1,46 @@
+name: Checks
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build frontend
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+  hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: hub/uv.lock
+      # The tree has known pre-existing Ruff findings unrelated to current work, so this step
+      # reports them without failing the build. Remove continue-on-error once the backlog is clean.
+      - name: Run Ruff (report only)
+        working-directory: hub
+        continue-on-error: true
+        run: uvx --from 'ruff>=0.13' ruff check app tests --output-format=concise
+      - name: Run backend tests
+        working-directory: hub
+        run: uv sync --frozen --group dev && uv run --frozen pytest -p no:cacheprovider -W ignore -q

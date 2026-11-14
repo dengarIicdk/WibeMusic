@@ -1,5 +1,6 @@
 import { api } from '../api/client';
 import { Icon, type IconName } from '../components/Icon';
+import { ChartsRow } from '../components/Charts';
 import { VibeModes } from '../components/VibeModes';
 import { WaveHero } from '../components/WaveHero';
 import { ErrorState, SectionTitle, Spinner } from '../components/ui';
@@ -58,6 +59,7 @@ export function HomePage() {
               <ArtistRow artists={d.radio} rowKey="home:radio" radio />
             </section>
           )}
+          <ChartsRow />
           <AlbumRow title="Недавно слушали" albums={d.recent} rowKey="home:recent" />
           <AlbumRow title="Часто слушаете" albums={d.frequent} rowKey="home:frequent" />
           <AlbumRow title="Понравившиеся альбомы" albums={d.starred} rowKey="home:starred" more="/liked" />

@@ -1,42 +1,48 @@
-# HomeMusic
+# WibeMusic
 
-Личный музыкальный сервис на домашнем ПК: библиотека и стриминг — **Navidrome**, плеер на телефоне — **Tempus**,
-поиск, скачивание, загрузка своих файлов и ИИ-ассистент — свой сервис **Хаб** (FastAPI + PWA).
-API Хаба — [hub/API.md](hub/API.md).
+Личный музыкальный сервис с русскоязычным веб-приложением, PWA и Android-клиентом. В Windows-установщик уже входят веб-интерфейс, Hub и Navidrome: Docker, Python и Node.js на компьютере не нужны.
 
-**Скачать Android-приложение:** [HomeMusic.apk](https://github.com/justman-1/HomeMusic-public/releases/latest/download/HomeMusic.apk)
-(все версии — [Releases](https://github.com/justman-1/HomeMusic-public/releases)). Приложению нужен свой сервер HomeMusic:
-вход только по приглашению его владельца.
+## Самый простой запуск — Windows
 
+1. Скачайте [WibeMusic-Setup.exe](https://github.com/dengarIicdk/WibeMusic/releases/latest/download/WibeMusic-Setup.exe) со страницы [последнего релиза](https://github.com/dengarIicdk/WibeMusic/releases/latest). Если релиза ещё нет, последнюю сборку установщика можно скачать как artifact запуска `Windows installer` в разделе Actions.
+2. Запустите установщик (нужны права администратора) и после установки откройте в меню «Пуск» → **WibeMusic**. Приложение само запускает Navidrome и Hub, затем открывает `http://localhost:8080` в браузере.
+3. При первом запуске Navidrome создаёт администратора; откройте `http://localhost:4533`, войдите (`admin` и пароль из `%LOCALAPPDATA%\\WibeMusic\\secrets.json`, ключ `admin_password`) и настройте библиотеку.
+4. Добавьте музыку в папку **Музыка\\WibeMusic\\library**. Navidrome сканирует библиотеку раз в час (и при запуске); затем откройте или обновите страницу `http://localhost:8080`.
+
+Файлы и база хранятся отдельно от программы в `%LOCALAPPDATA%\\WibeMusic`, музыка — в `%USERPROFILE%\\Music\\WibeMusic\\library`. Установщик создаёт локального администратора `admin`; его случайный пароль хранится в `%LOCALAPPDATA%\\WibeMusic\\secrets.json` (`admin_password`). Сохраните эти данные: они понадобятся Android-клиенту и другим устройствам. Не публикуйте этот файл. Веб-сервер слушает локальные интерфейсы для доступа из домашней сети. Другие устройства должны войти в учётную запись Navidrome (автовход работает только при прямом запросе `localhost` с этого же ПК). Не выставляйте порты `8080` и `4533` в интернет без HTTPS и защищённой авторизации.
+
+## Android
+
+[Откройте релизы WibeMusic](https://github.com/dengarIicdk/WibeMusic/releases/latest) и скачайте APK `WibeMusic-Android.apk` после version tag. Для сборки с последнего push откройте раздел Actions репозитория, выберите запуск `Android APK` и скачайте artifact. Клиент подключается к уже работающему серверу WibeMusic: введите его адрес, например `http://192.168.1.10:8080` в домашней сети.
+
+Это небольшой WebView-клиент: самостоятельного музыкального сервера в APK нет, приложение только открывает интерфейс Hub. Требования: Android 7.0 (API 24) и новее. Сборка в CI — debug-вариант без production-подписи; release-keystore пока не настроен, поэтому APK предназначен для личной установки. Разрешайте установку APK только если доверяете сборке.
+
+## Установка через Docker (для сервера или локальной сети)
+
+Если приложение нужно постоянно держать на отдельном ПК или открывать с других устройств, используйте Docker-вариант. Нужны Windows 10/11 с Docker Desktop и WSL2 (либо Linux с Docker Compose). Скопируйте и настройте примеры:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item config.example.yaml config.yaml
 ```
-Телефон ──HTTPS──> VPS 203.0.113.10 (Caddy, сертификат Let's Encrypt на IP)
-                     :8444 → 127.0.0.1:4533 ─┐
-                     :8445 → 127.0.0.1:8080 ─┤ обратный SSH-туннель (пользователь homemusic-tunnel)
-                                             ▼
-             ПК (Docker Desktop): homemusic_tunnel → navidrome:4533, hub:8080
-                                  MUSIC_ROOT = B:\Music (library/, staging/, .trash/, .backups/)
+
+Укажите в `.env` путь `MUSIC_ROOT` к папке с музыкой, а также секреты `ND_PASSWORDENCRYPTIONKEY` и `HUB_SECRET_KEY` (инструкции — в комментариях к `.env.example`). Затем создайте каталоги `library`, `staging`, `.trash`, `.backups` внутри `MUSIC_ROOT` и выполните:
+
+```powershell
+docker compose up -d --build navidrome youtube-pot hub
 ```
 
-| Что | Адрес снаружи | Адрес дома |
-|---|---|---|
-| Navidrome (Tempus, веб-плеер) | `https://203.0.113.10:8444` | `http://192.168.1.10:4533` |
-| Хаб (PWA) | `https://203.0.113.10:8445` | `http://192.168.1.10:8080` |
+Приложение: `http://localhost:8080`; Navidrome: `http://localhost:4533`. Для телефона замените `localhost` на локальный IP компьютера, например `http://192.168.1.10:8080`, разрешите доступ к нужным портам в частной сети Windows и используйте учётную запись Navidrome. Не публикуйте порты в интернет без HTTPS, аутентификации и настройки безопасного удалённого доступа. Дополнительные GPU/VPS/Soulseek-сервисы выключены по умолчанию.
 
-В обычном браузере Хаб — весь сервис без приложения: Главная, библиотека Navidrome («Понравившиеся», плейлисты,
-исполнители, альбомы) и плеер с очередью. Внутри Android-приложения он открывается только своими разделами.
+API Hub описан в [hub/API.md](hub/API.md). Настройки и дополнительные возможности — в разделах ниже и в `.env.example`.
 
-Логин и пароль везде одни — учётка Navidrome.
+---
 
-## Запуск с нуля
+## Дополнительные возможности Hub
 
-1. Docker Desktop (WSL2), Git. Docker Desktop должен стартовать при входе в Windows (сейчас так и есть).
-   Сон ПК отключён (питание от сети → «никогда»).
-2. Папка музыки: `B:\Music` с подпапками `library`, `staging`, `.trash`, `.backups`.
-3. Настройки:
-   ```
-   copy .env.example .env          # заполнить секреты (см. комментарии в файле)
-   copy config.example.yaml config.yaml
-   ```
+Подробные параметры Hub, интеграции и варианты Docker приведены в `.env.example`, `config.example.yaml` и `docker-compose.yml`. Дополнительная историческая документация HomeMusic находится в файле `docs/progress/` и требует адаптации под свой сервер. Не используйте чужие VPS-адреса, ключи или секреты.
+
+<!-- Архивная документация HomeMusic; не является инструкцией для установки WibeMusic.
    `LLM_API_KEY` — ключ OpenRouter для ИИ-ассистента (без него работают ссылки и текстовые списки, но не скриншоты).
    `LASTFM_API_KEY` — ключ Last.fm для «Микса дня» (похожие треки и исполнители, теги для названия; без него
    микс собирается из остальных источников).
@@ -455,4 +461,5 @@ rm -rf /etc/homemusic; nft delete table inet homemusic_guard 2>/dev/null; system
 rm -f /etc/ssh/sshd_config.d/61-homemusic-tunnel.conf && sshd -t && systemctl reload ssh
 pkill -u homemusic-tunnel; userdel -r homemusic-tunnel
 # в /etc/caddy/Caddyfile удалить блок между "# >>> homemusic" и "# <<< homemusic", затем: systemctl reload caddy
+-->
 ```

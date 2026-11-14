@@ -1,6 +1,6 @@
 import { useListen } from '../lib/listen';
 import { useRoute } from '../lib/router';
-import { canWave, startWave, useWave } from '../lib/wave';
+import { WAVE_TITLE, canWave, startWave, useWave } from '../lib/wave';
 import { Icon } from './Icon';
 import { Spinner } from './ui';
 
@@ -11,7 +11,7 @@ export function WaveCard() {
   const { path } = useRoute();
   if (!canWave()) return null;
   const busy = starting === '';
-  const on = playing && title === 'Моя волна';
+  const on = playing && title === WAVE_TITLE;
 
   return (
     <button

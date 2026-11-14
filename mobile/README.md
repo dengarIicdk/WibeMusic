@@ -14,8 +14,10 @@ gradle assembleDebug
 
 APK: `mobile/app/build/outputs/apk/debug/app-debug.apk`.
 
-## Что дальше
+## Возможности и ограничения
 
-- Сервер внутри APK (Chaquopy) не сделан: Hub тяжёлый, нужна проверка на ARM.
-- Не проверено на устройстве: сборка и запуск ещё не выполнялись, Android SDK на сборочной машине не установлен.
-- Для релиза нужна подпись APK (keystore) и `release`-сборка.
+- APK — WebView-клиент, а не отдельный сервер. Сначала запустите Hub и Navidrome на своём ПК, затем в приложении укажите адрес Hub, например `http://192.168.1.10:8080` для домашней сети.
+- Сборка выполняется GitHub Actions из `.github/workflows/android.yml`; после push в `master` APK скачивается из артефактов соответствующего запуска Actions, после version tag — со страницы GitHub Release.
+- CI создаёт debug APK, который не подписан production-ключом. Перед регулярным распространением нужно настроить keystore, release-сборку и проверить APK на устройстве.
+- APK собран и проверен на Android-устройстве: нет. На компьютере разработчика отсутствует Android SDK, поэтому локальная сборка не выполнялась; результат берётся из GitHub Actions (workflow `.github/workflows/android.yml`).
+- В репозитории нет Gradle wrapper (`gradlew`): локальная сборка требует установленных JDK 17, Android SDK с platform 34 и Gradle 8.9. В CI Gradle ставится шагом `gradle/actions/setup-gradle`.

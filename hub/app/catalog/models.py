@@ -39,6 +39,23 @@ class CatalogArtist(BaseModel):
     nb_fans: int | None = None
 
 
+class CatalogGenre(BaseModel):
+    id: str
+    name: str
+    picture_url: str | None = None
+    picture_small_url: str | None = None
+
+
+class CatalogPlaylist(BaseModel):
+    ref: str
+    id: str
+    title: str
+    picture_url: str | None = None
+    picture_small_url: str | None = None
+    nb_tracks: int | None = None
+    creator: str | None = None
+
+
 class CatalogTrack(BaseModel):
     ref: str
     source: Source
@@ -60,6 +77,11 @@ class CatalogTrack(BaseModel):
     cover_small_url: str | None = None  # for lists (Deezer cover_medium, 250 px): ~10× fewer bytes than `cover_url`
     preview_url: str | None = None
     rank: int | None = None  # Deezer popularity (mixes score with it)
+
+
+class PlaylistPage(BaseModel):
+    playlist: CatalogPlaylist
+    tracks: list[CatalogTrack] = []
 
 
 class CatalogAlbum(BaseModel):

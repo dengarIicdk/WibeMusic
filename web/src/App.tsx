@@ -22,6 +22,7 @@ import { MixDetailPage, WaveDetailPage } from './pages/insights/Recs';
 import { TrackWeightPage } from './pages/insights/Track';
 import { AlbumPage } from './pages/Album';
 import { ArtistPage } from './pages/Artist';
+import { CatalogGenresPage, GenrePage, CatalogPlaylistPage } from './pages/CatalogCollections';
 import { AssistantChatsPage, AssistantPage } from './pages/Assistant';
 import { AssistantTaskPage } from './pages/AssistantTask';
 import { DownloadDetailPage } from './pages/DownloadDetail';
@@ -39,6 +40,7 @@ import { PlaylistsPage } from './pages/Playlists';
 import { SearchPage, searchTab } from './pages/Search';
 import { SharePage } from './pages/Share';
 import { UploadPage } from './pages/Upload';
+import { VibePage } from './pages/Vibe';
 
 type RouteDef = [pattern: string, tab: Tab | null, render: (p: Record<string, string>, r: Route) => ReactNode];
 
@@ -56,15 +58,19 @@ const STANDALONE_ROUTES: RouteDef[] = [
 ];
 
 /** Where an unknown or empty route goes. */
-const START = STANDALONE ? '/home' : '/search';
+const START = '/vibe';
 
 const ROUTES: RouteDef[] = [
   ...(STANDALONE ? STANDALONE_ROUTES : []),
   ['/search', 'search', (_, r) => <SearchPage initialQuery={r.query.get('q') ?? ''} initialTab={searchTab(r.query.get('tab'))} />],
   ['/artist/:ref', 'search', (p) => <ArtistPage key={p.ref} refId={p.ref} />],
   ['/album/:ref', 'search', (p) => <AlbumPage key={p.ref} refId={p.ref} />],
+  ['/catalog/genres', 'vibe', () => <CatalogGenresPage />],
+  ['/catalog/genre/:id', 'vibe', (p) => <GenrePage key={p.id} id={p.id} />],
+  ['/catalog/playlist/:ref', 'vibe', (p) => <CatalogPlaylistPage key={p.ref} refId={p.ref} />],
   ['/mix/:id', 'search', (p) => <MixPage key={p.id} id={Number(p.id)} />],
   ['/taste', 'search', () => <TastePage />],
+  ['/vibe', 'vibe', () => <VibePage />],
   ['/downloads', 'downloads', () => <DownloadsPage />],
   ['/downloads/:id', 'downloads', (p) => <DownloadDetailPage key={p.id} id={Number(p.id)} />],
   ['/library', 'library', (_, r) => <LibraryPage initialQuery={r.query.get('q') ?? ''} />],

@@ -615,6 +615,36 @@ async def test_rebuild_is_for_the_admin_and_mixes_are_private(env, monkeypatch) 
     assert r.json() == {"queued": True}
 
 
+async def test_catalog_discovery_endpoints(env) -> None:
+    client = env["client"]
+
+    related = await client.get("/api/catalog/artist/dz:1/related")
+    assert related.status_code == 200 and [item["name"] for item in related.json()] == ["Земфира"]
+    radio = await client.get("/api/catalog/artist/dz:1/radio")
+    assert radio.status_code == 200 and radio.json()[0]["artist_ref"] == "dz:1"
+    genres = await client.get("/api/catalog/genres")
+    assert genres.status_code == 200
+    assert [item["name"] for item in genres.json()["genres"]] == ["Rock"]
+    assert genres.json()["playlists"][0]["ref"] == "dz:77"
+    by_genre = await client.get("/api/catalog/genres/152/playlists")
+    assert by_genre.status_code == 200 and by_genre.json()["genre"]["name"] == "Rock"
+    assert by_genre.json()["playlists"][0]["title"] == "Rock Mix"
+    playlist = await client.get("/api/catalog/playlist/dz:77")
+    assert playlist.status_code == 200
+    assert playlist.json()["playlist"]["title"] == "Rock Mix"
+    assert playlist.json()["tracks"][0]["ref"] == "dz:100"
+    assert (await client.get("/api/catalog/genres/not-an-id/playlists")).status_code == 404
+    assert (await client.get("/api/catalog/artist/hm:1/related")).status_code == 404
+
+
+async def test_catalog_discovery_requires_auth(env) -> None:
+    from app.main import create_app
+    from tests.support import app_client
+
+    async with app_client(create_app(), login=None) as anon:
+        assert (await anon.get("/api/catalog/genres")).status_code == 401
+
+
 async def test_onboarding_picks_artists_and_starts_a_build(env) -> None:
     from app.db import session_scope
     from app.models import Job

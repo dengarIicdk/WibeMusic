@@ -172,6 +172,30 @@ class FakeDeezer:
     async def chart_artists(self, limit=30):
         return [self.artist("2", "Земфира"), self.artist("1", "Кино")]
 
+    async def get_artist_related(self, id_):
+        return [self.artist("2", "Земфира")] if str(id_) == "1" else []
+
+    async def get_artist_radio(self, id_):
+        return [self.track.model_copy(update={"artist_ref": f"dz:{id_}"})]
+
+    async def get_genres(self):
+        from app.catalog.models import CatalogGenre
+
+        return [CatalogGenre(id="152", name="Rock")]
+
+    async def get_chart_playlists(self, limit=30):
+        from app.catalog.models import CatalogPlaylist
+
+        return [CatalogPlaylist(ref="dz:77", id="77", title="Rock Mix", nb_tracks=2)]
+
+    async def get_editorial_playlists(self, genre_id, limit=20):
+        return await self.get_chart_playlists(limit)
+
+    async def get_playlist(self, id_, limit=100):
+        from app.catalog.models import CatalogPlaylist, PlaylistPage
+
+        return PlaylistPage(playlist=CatalogPlaylist(ref=f"dz:{id_}", id=str(id_), title="Rock Mix", nb_tracks=1), tracks=[self.track])
+
     async def get_artist_top(self, id_, limit=10):
         return [self.track.model_copy(update={"artist_ref": "dz:1"})] if str(id_) == "1" else []
 

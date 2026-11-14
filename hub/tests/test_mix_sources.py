@@ -161,6 +161,75 @@ async def test_deezer_radio_related_and_chart(dz, respx_mock: respx.MockRouter) 
     assert len(await dz.chart_artists(30)) == 3
 
 
+async def test_deezer_genres_editorial_playlists_and_playlist_tracks(dz, respx_mock: respx.MockRouter) -> None:
+    from app.catalog.deezer import BASE_URL
+
+    genres_route = respx_mock.get(f"{BASE_URL}/genre").respond(json={"data": [
+        {"id": 0, "name": "All"},
+        {"id": 152, "name": "Rock", "picture_medium": "https://img.test/rock.jpg"},
+    ]})
+    playlist_payload = {
+        "id": 77, "title": "Rock Essentials", "nb_tracks": 1,
+        "picture_medium": "https://img.test/playlist.jpg", "user": {"name": "Deezer Editor"},
+    }
+    respx_mock.get(f"{BASE_URL}/chart/0/playlists").respond(json={"data": [playlist_payload]})
+    respx_mock.get(f"{BASE_URL}/editorial/152/charts").respond(json={"playlists": {"data": [playlist_payload]}})
+    respx_mock.get(f"{BASE_URL}/playlist/77").respond(json=playlist_payload)
+    respx_mock.get(f"{BASE_URL}/playlist/77/tracks").respond(json={"data": [{
+        "id": 900, "title": "Song", "duration": 180, "artist": {"id": 7, "name": "Artist"},
+        "album": {"id": 8, "title": "Album", "cover_medium": "https://img.test/cover.jpg"},
+    }]})
+
+    genres = await dz.get_genres()
+    assert [(genre.id, genre.name, genre.picture_small_url) for genre in genres] == [
+        ("152", "Rock", "https://img.test/rock.jpg")
+    ]
+    assert genres_route.call_count == 1
+    assert (await dz.get_chart_playlists())[0].creator == "Deezer Editor"
+    assert (await dz.get_editorial_playlists("152"))[0].ref == "dz:77"
+    page = await dz.get_playlist("77")
+    assert page.playlist.title == "Rock Essentials"
+    assert [(track.ref, track.artist, track.album_title) for track in page.tracks] == [("dz:900", "Artist", "Album")]
+
+
+async def test_deezer_playlist_rejects_foreign_pagination_url(dz, respx_mock: respx.MockRouter) -> None:
+    from app.catalog.deezer import BASE_URL, DeezerError
+
+    payload = {"id": 77, "title": "Rock Essentials", "nb_tracks": 101}
+    respx_mock.get(f"{BASE_URL}/playlist/77").respond(json=payload)
+    respx_mock.get(f"{BASE_URL}/playlist/77/tracks", params={"limit": "100"}).respond(
+        json={"data": [{"id": i + 1, "title": f"Song {i}", "artist": {"name": "Artist"}} for i in range(100)],
+              "next": "https://attacker.test/steal"}
+    )
+    with pytest.raises(DeezerError, match="pagination URL"):
+        await dz.get_playlist("77", limit=150)
+
+
+async def test_deezer_playlist_follows_pagination(dz) -> None:
+    from app.catalog.deezer import BASE_URL
+
+    calls: list[str] = []
+
+    async def get(path: str, params=None):
+        calls.append(path)
+        if path == "playlist/987":
+            return {"id": 987, "title": "Rock Essentials", "nb_tracks": 101}
+        if path == "playlist/987/tracks":
+            return {
+                "data": [{"id": i + 1, "title": f"Song {i}", "artist": {"name": "Artist"}} for i in range(100)],
+                "next": f"{BASE_URL}/playlist/987/tracks?index=100&limit=100",
+            }
+        if path == f"{BASE_URL}/playlist/987/tracks?index=100&limit=100":
+            return {"data": [{"id": 101, "title": "Song 100", "artist": {"name": "Artist"}}]}
+        raise AssertionError(f"Unexpected Deezer request: {path}")
+
+    dz._get = get
+    result = await dz.get_playlist("987", limit=150)
+    assert len(result.tracks) == 101
+    assert result.tracks[-1].ref == "dz:101"
+    assert calls[-1].startswith(BASE_URL)
+
+
 # --- Yandex -------------------------------------------------------------------------------------------------------
 
 

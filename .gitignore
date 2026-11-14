@@ -47,6 +47,7 @@ OPTIMIZE-TODO.md
 OPTIMIZE-DONE.md
 design-review/
 
-# built installers (large, published as release assets)
+# build outputs and local compiler state
 desktop/dist/
+web/tsconfig.tsbuildinfo
 

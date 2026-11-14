@@ -1,4 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
-  <rect width="108" height="108" rx="24" fill="#0b0b0b"/>
-  <path fill="#2dd4bf" d="M42 30h8v40h-8zM60 24h8v46h-8zM30 50h8v20h-8zM72 44h8v26h-8z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="22" fill="#0b0b0b"/>
+  <g transform="translate(50 50) scale(.86) translate(-50 -50)">
+    <circle cx="27" cy="50" r="19" fill="#2dd4bf"/>
+    <circle cx="73" cy="50" r="19" fill="#2dd4bf"/>
+    <polyline points="15,40 20.5,60 27,44 33.5,60 39,40" fill="none" stroke="#0b0b0b" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="61.5,60 61.5,40 73,52 84.5,40 84.5,60" fill="none" stroke="#0b0b0b" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M44.5 50H55.5M50 44.5V55.5" fill="none" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round"/>
+  </g>
 </svg>

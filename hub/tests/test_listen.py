@@ -435,24 +435,19 @@ async def test_seek_far_past_the_server_copy_goes_to_the_source(env, monkeypatch
     gate.set()
 
 
-async def test_deezer_preview_when_no_source_has_it(env):
+async def test_deezer_preview_is_never_played(env):
     c = env["client"]
     r = await c.get("/api/listen", params={"ref": "dz:100"})
-    assert r.status_code == 200, r.text
-    assert r.json()["kind"] == "preview" and r.json()["duration_s"] == 30 and r.json()["provider"] is None
-    r = await c.get(r.json()["stream_url"], headers={"Range": "bytes=0-"})
-    assert r.status_code == 206 and r.content == AUDIO
-    from app.services import svc
-
-    assert svc.deezer.previews >= 1  # a fresh signed link, not the cached catalog one
+    assert r.status_code == 404, r.text
+    assert "Полной версии" in r.json()["detail"]
+    assert not any(call.request.url.host == "preview.test" for call in env["mock"].calls)
 
 
 async def test_full_song_request_never_plays_a_preview(env):
     c = env["client"]
-    assert (await c.get("/api/listen", params={"ref": "dz:100"})).json()["kind"] == "preview"
+    assert (await c.get("/api/listen", params={"ref": "dz:100"})).status_code == 404
     response = await c.get("/api/listen/stream", params={"ref": "dz:100", "full": "1"})
-    assert response.status_code == 503, response.text
-    assert "Полная версия" in response.json()["detail"]
+    assert response.status_code == 404, response.text
     assert not any(call.request.url.host == "preview.test" for call in env["mock"].calls)
 
 
@@ -460,7 +455,7 @@ async def test_full_song_replaces_a_cached_preview_with_the_download_fallback(en
     from app.services import svc
 
     c = env["client"]
-    assert (await c.get("/api/listen", params={"ref": "dz:100"})).json()["kind"] == "preview"
+    assert (await c.get("/api/listen", params={"ref": "dz:100"})).status_code == 404
     svc.providers["soundcloud"] = FakeProvider("soundcloud", [
         cand("full", "https://cdn.test/good.mp3", provider="soundcloud"),
     ], client=env["hm"].client)
@@ -512,9 +507,9 @@ async def test_a_full_request_joining_browser_resolution_does_not_play_the_previ
         native = asyncio.create_task(env["client"].get("/api/listen/stream", params={"ref": "dz:100", "full": "1"}))
         await asyncio.sleep(0)
         release.set()
-        assert (await asyncio.wait_for(browser, 1)).json()["kind"] == "preview"
+        assert (await asyncio.wait_for(browser, 1)).status_code == 404
         response = await asyncio.wait_for(native, 1)
-        assert response.status_code == 503, response.text
+        assert response.status_code == 404, response.text
         assert not any(call.request.url.host == "preview.test" for call in env["mock"].calls)
     finally:
         release.set()
@@ -561,13 +556,11 @@ async def test_preview_picked_while_a_source_is_down_is_not_remembered(env):
     c, hm, fm = env["client"], env["hm"], env["fm"]
     hm.down = fm.down = True  # e.g. the Hub's network dropped for a minute
     r = await c.get("/api/listen", params={"ref": "dz:100"})
-    assert r.json()["kind"] == "preview"
-    hit = listen._choices["dz:100"]
-    assert hit.transient
-    # back online: the preview isn't kept for long, and nothing was remembered
+    assert r.status_code == 502
+    assert "dz:100" not in listen._choices
+    # back online: nothing was remembered, the full file is found
     hm.down = fm.down = False
     hm.cands = [cand("1", "https://cdn.test/good.mp3")]
-    hit.at = time.monotonic() - listen.TRANSIENT_TTL_S - 1
     assert (await c.get("/api/listen", params={"ref": "dz:100"})).json()["kind"] == "full"
     await listen.reset()
     assert (await c.get("/api/listen", params={"ref": "dz:100"})).json()["kind"] == "full"

@@ -730,12 +730,9 @@ async def _resolve_deezer(ref: str, id_: str, probe: bool, *, full_only: bool = 
     path, nd_song_id = await _library_file(query)
     if path:
         return Choice(ref, "library", q.artist, q.title, q.duration_s, path=path, nd_song_id=nd_song_id, query=query)
-    choice = Choice(ref, "preview", q.artist, q.title, PREVIEW_S, query=query, transient=bool(trouble))
-    if t.preview_url and (full_only or not probe or await _opens_bounded(choice)):
-        return choice
     if trouble:
         raise ListenError(502, "Источники недоступны: " + "; ".join(trouble))
-    raise ListenError(404, "Трек не нашёлся ни в одном источнике")
+    raise ListenError(404, "Полной версии трека нет ни в одном источнике")
 
 
 META_TIMEOUT_S = 1.5

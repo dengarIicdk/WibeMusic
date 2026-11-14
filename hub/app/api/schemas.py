@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 
-from app.catalog.models import CatalogAlbum, CatalogArtist, CatalogTrack
+from app.catalog.models import CatalogAlbum, CatalogArtist, CatalogGenre, CatalogPlaylist, CatalogTrack
 from app.providers.base import Candidate
 
 # --- auth ------------------------------------------------------------------------------
@@ -317,6 +317,21 @@ class ArtistPageOut(BaseModel):
     albums: list[AlbumOut] = []
     singles: list[AlbumOut] = []
     compilations: list[AlbumOut] = []
+
+
+class CatalogGenresOut(BaseModel):
+    genres: list[CatalogGenre] = []
+    playlists: list[CatalogPlaylist] = []
+
+
+class GenrePlaylistsOut(BaseModel):
+    genre: CatalogGenre
+    playlists: list[CatalogPlaylist] = []
+
+
+class CatalogPlaylistOut(BaseModel):
+    playlist: CatalogPlaylist
+    tracks: list[TrackOut] = []
 
 
 class SearchOut(BaseModel):

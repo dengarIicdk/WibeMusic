@@ -2,14 +2,28 @@ name: Android APK
 
 on:
   push:
+    branches: [master]
     tags: ['v*']
+  pull_request:
+    branches: [master]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/**/*.gradle*', 'mobile/gradle.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
 
       - uses: actions/setup-java@v4
         with:
@@ -24,13 +38,28 @@ jobs:
         working-directory: mobile
         run: gradle assembleDebug --no-daemon
 
+      - name: Prepare release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: cp mobile/app/build/outputs/apk/debug/app-debug.apk WibeMusic-Android.apk
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: WibeMusic-Android-Release-${{ github.sha }}
+          path: WibeMusic-Android.apk
+          if-no-files-found: error
+          retention-days: 14
+
       - uses: actions/upload-artifact@v4
         with:
-          name: WibeMusic-debug-apk
+          name: WibeMusic-Android-${{ github.sha }}
           path: mobile/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: mobile/app/build/outputs/apk/debug/app-debug.apk
+          files: WibeMusic-Android.apk

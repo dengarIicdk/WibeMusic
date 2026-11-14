@@ -1,6 +1,7 @@
 # Builds the Windows installer WibeMusic-Setup.exe without Docker, system Python or Node on the target PC.
 # Needs on the build machine: uv, Inno Setup 6, internet. Output: desktop\dist\WibeMusic-Setup.exe
 param(
+    [string]$Uv = "uv",
     [string]$Navidrome = "0.64.2",
     [string]$Deno = "2.9.8",
     [string]$Ffmpeg = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
@@ -20,14 +21,25 @@ New-Item -ItemType Directory -Force "$stage\bin", "$stage\hub", "$stage\navidrom
 
 # Python 3.12 from uv, with Hub dependencies installed into site\
 $env:UV_PYTHON_INSTALL_DIR = Join-Path $work "py"
-python -m uv python install 3.12 --no-bin | Out-Null
+$uvArgs = @()
+$uvExe = $Uv
+if ([System.IO.Path]::GetFileNameWithoutExtension($Uv) -eq "python") {
+    $uvArgs = @("-m", "uv")
+    $uvExe = (Get-Command $Uv).Source
+}
+& $uvExe @uvArgs python install 3.12 --no-bin | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "uv python install завершился с ошибкой $LASTEXITCODE" }
 $py = Get-ChildItem $env:UV_PYTHON_INSTALL_DIR -Directory -Filter "cpython-3.12.*-windows-x86_64-none" |
     Sort-Object Name | Select-Object -Last 1
 Copy-Item -LiteralPath $py.FullName -Destination "$stage\python" -Recurse -Force
 Push-Location "$root\hub"
-python -m uv export --frozen --no-dev --no-hashes --no-emit-project -o "$work\req.txt" | Out-Null
+& $Uv @uvArgs export --frozen --no-dev --no-hashes --no-emit-project -o "$work\req.txt" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "uv export завершился с ошибкой $LASTEXITCODE" }
 Pop-Location
-python -m uv pip install --python "$stage\python\python.exe" --target "$stage\site" -r "$work\req.txt" | Out-Null
+# Windows has no system time zone database: zoneinfo needs the tzdata package (Europe/Moscow etc.)
+Add-Content -Path "$work\req.txt" -Value "tzdata"
+& $Uv @uvArgs pip install --python "$stage\python\python.exe" --target "$stage\site" -r "$work\req.txt" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "uv pip install завершился с ошибкой $LASTEXITCODE" }
 
 # Navidrome, Deno, ffmpeg
 Invoke-WebRequest "https://github.com/navidrome/navidrome/releases/download/v$Navidrome/navidrome_${Navidrome}_windows_amd64.zip" -OutFile "$work\nd.zip" -UseBasicParsing

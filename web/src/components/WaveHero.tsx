@@ -1,5 +1,5 @@
 import { toggle, useListen } from '../lib/listen';
-import { canWave, startWave, useWave } from '../lib/wave';
+import { WAVE_TITLE, canWave, startWave, useWave } from '../lib/wave';
 import { Icon } from './Icon';
 import { Spinner } from './ui';
 import { WaveGlow } from './WaveGlow';
@@ -15,7 +15,7 @@ export function WaveHero() {
   const cover = useListen((s) => s.track?.cover_small_url ?? s.track?.cover_url ?? null);
   if (!canWave()) return null;
   const busy = starting === '';
-  const on = wave && title === 'Моя волна';
+  const on = wave && title === WAVE_TITLE;
   const playing = on && phase === 'playing';
   // wanted to play (loading the next track counts): the button then offers a pause
   const running = on && (playing || phase === 'loading' || phase === 'resolving');

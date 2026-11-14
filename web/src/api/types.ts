@@ -207,6 +207,38 @@ export interface ArtistPageOut {
   compilations: AlbumOut[];
 }
 
+export interface CatalogGenre {
+  id: string;
+  name: string;
+  picture_url?: string | null;
+  picture_small_url?: string | null;
+}
+
+export interface CatalogPlaylist {
+  ref: string;
+  id: string;
+  title: string;
+  picture_url?: string | null;
+  picture_small_url?: string | null;
+  nb_tracks?: number | null;
+  creator?: string | null;
+}
+
+export interface CatalogGenresOut {
+  genres: CatalogGenre[];
+  playlists: CatalogPlaylist[];
+}
+
+export interface GenrePlaylistsOut {
+  genre: CatalogGenre;
+  playlists: CatalogPlaylist[];
+}
+
+export interface CatalogPlaylistOut {
+  playlist: CatalogPlaylist;
+  tracks: TrackOut[];
+}
+
 // --- library ----------------------------------------------------------------------------------
 
 export type ReleaseType = 'album' | 'single' | 'ep' | 'compilation';

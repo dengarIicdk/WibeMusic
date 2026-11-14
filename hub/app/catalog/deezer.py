@@ -28,7 +28,10 @@ from app.catalog.models import (
     ArtistPage,
     CatalogAlbum,
     CatalogArtist,
+    CatalogGenre,
+    CatalogPlaylist,
     CatalogTrack,
+    PlaylistPage,
     SearchResults,
     make_ref,
 )
@@ -90,6 +93,27 @@ def map_artist(d: dict[str, Any]) -> CatalogArtist:
         picture_small_url=d.get("picture_medium") or None,
         nb_albums=d.get("nb_album"),
         nb_fans=d.get("nb_fan"),
+    )
+
+
+def map_genre(d: dict[str, Any]) -> CatalogGenre:
+    return CatalogGenre(
+        id=str(d["id"]),
+        name=d.get("name") or "",
+        picture_url=d.get("picture_xl") or d.get("picture_big") or d.get("picture_medium") or None,
+        picture_small_url=d.get("picture_medium") or d.get("picture_small") or None,
+    )
+
+
+def map_playlist(d: dict[str, Any]) -> CatalogPlaylist:
+    return CatalogPlaylist(
+        ref=make_ref("dz", d["id"]),
+        id=str(d["id"]),
+        title=d.get("title") or "",
+        picture_url=d.get("picture_xl") or d.get("picture_big") or d.get("picture_medium") or None,
+        picture_small_url=d.get("picture_medium") or d.get("picture_small") or None,
+        nb_tracks=d.get("nb_tracks"),
+        creator=(d.get("user") or {}).get("name") or None,
     )
 
 
@@ -370,6 +394,60 @@ class DeezerClient:
             return [map_artist(x) for x in data.get("data") or []]
 
         return await self._cached_list(f"dz:chart_artists:{limit}", self.cfg.ttl_search_s, CatalogArtist, produce)
+
+    async def get_genres(self) -> list[CatalogGenre]:
+        """Available Deezer editorial categories (excluding the synthetic All item)."""
+
+        async def produce() -> list[CatalogGenre]:
+            data = await self._get("genre")
+            return [map_genre(item) for item in data.get("data") or [] if str(item.get("id")) != "0"]
+
+        return await self._cached_list("dz:genres", self.cfg.ttl_search_s, CatalogGenre, produce)
+
+    async def get_editorial_playlists(self, genre_id: str | int, limit: int = 20) -> list[CatalogPlaylist]:
+        """Deezer's editorial charts for a genre (the genre/{id}/playlists route is not available)."""
+
+        async def produce() -> list[CatalogPlaylist]:
+            data = await self._get(f"editorial/{genre_id}/charts", {"limit": limit})
+            return [map_playlist(item) for item in (data.get("playlists") or {}).get("data") or []]
+
+        return await self._cached_list(
+            f"dz:editorial_playlists:{genre_id}:{limit}", self.cfg.ttl_search_s, CatalogPlaylist, produce
+        )
+
+    async def get_chart_playlists(self, limit: int = 30) -> list[CatalogPlaylist]:
+        """Public Deezer chart playlists, selected by the caller's location."""
+
+        async def produce() -> list[CatalogPlaylist]:
+            data = await self._get("chart/0/playlists", {"limit": limit})
+            return [map_playlist(item) for item in data.get("data") or []]
+
+        return await self._cached_list(f"dz:chart_playlists:{limit}", self.cfg.ttl_search_s, CatalogPlaylist, produce)
+
+    async def get_playlist(self, id_: str | int, limit: int = 100) -> PlaylistPage:
+        """Read-only public playlist page; cap at 1000 tracks even if the caller raises `limit`."""
+
+        async def produce() -> PlaylistPage:
+            max_tracks = min(max(limit, 1), PAGE_LIMIT * 10)
+            raw, track_data = await asyncio.gather(
+                self._get(f"playlist/{id_}"),
+                self._get(f"playlist/{id_}/tracks", {"limit": min(max_tracks, PAGE_LIMIT)}),
+            )
+            items = list(track_data.get("data") or [])
+            seen = {f"playlist/{id_}/tracks"}
+            while len(items) < max_tracks and (nxt := track_data.get("next")) and nxt not in seen:
+                if not nxt.startswith(BASE_URL + "/"):
+                    raise DeezerError("Unexpected Deezer playlist pagination URL")
+                seen.add(nxt)
+                track_data = await self._get(nxt)
+                page = track_data.get("data") or []
+                if not page:
+                    break
+                items.extend(page[: max_tracks - len(items)])
+            tracks = [map_track(item) for item in items if item.get("id")]
+            return PlaylistPage(playlist=map_playlist(raw), tracks=tracks)
+
+        return await self._cached_model(f"dz:playlist:{id_}:{limit}", self.cfg.ttl_album_s, PlaylistPage, produce)
 
     async def get_artist_albums(self, id_: str | int) -> list[CatalogAlbum]:
         """All releases (every page), clean/explicit twins merged, newest first."""

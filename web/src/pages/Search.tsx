@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, errorMessage, isAbort, peekCache, withQuery } from '../api/client';
 import type { Candidate, LibTrackOut, ProviderSearchOut, SearchOut, SearchTracksOut, TrackOut } from '../api/types';
 import { ArtistBubble, ReleaseCard, TrackRow, listenTrack } from '../components/catalog';
+import { ChartsRow } from '../components/Charts';
 import { TrackMenuButton } from '../components/TrackMenu';
 import { CandidateRow, fileRef } from '../components/candidate';
 import { Icon } from '../components/Icon';
@@ -157,7 +158,12 @@ function RecentSearches({ onPick }: { onPick: (q: string) => void }) {
   if (!res.data && res.loading) return <SkeletonRows n={3} />;
   if (res.error && !recent.length) return <ErrorState text={res.error} onRetry={() => res.reload()} />;
   if (!recent.length) {
-    return <Empty icon="search" title="Что будем слушать?" text="Ищите по каталогу Deezer и hitmoz, по своей библиотеке или по файлам в источниках." />;
+    return (
+      <div>
+        <Empty icon="search" title="Что будем слушать?" text="Ищите по каталогу Deezer и hitmoz, по своей библиотеке или по файлам в источниках." />
+        <ChartsRow />
+      </div>
+    );
   }
   return (
     <div>
