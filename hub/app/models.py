@@ -83,6 +83,21 @@ class EmailCode(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class AccessRequest(Base):
+    """Someone asked for an account by email: the owner approves or declines it by a link in a letter. The
+    login and password are made on approval and go to the address; the password is never stored in clear."""
+
+    __tablename__ = "access_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)  # lower case
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)  # sha256 of the token in the owner's links
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending/approved/declined
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
 class AiUsage(Base):
     """Every paid AI call of a user (chat turn, screenshot/link/text recognition): the admin's spending report."""
 

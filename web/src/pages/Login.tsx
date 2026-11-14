@@ -96,11 +96,11 @@ export function LoginPage({ onLogin }: { onLogin: (me: MeOut) => void }) {
   const wait = Math.max(0, Math.ceil((resendAt - now) / 1000));
 
   return (
-    <div className="pt-safe flex min-h-dvh flex-col justify-center bg-gradient-to-b from-[#123a24] via-bg to-bg px-6">
+    <div className="pt-safe flex min-h-dvh flex-col justify-center bg-gradient-to-b from-[#0f3b38] via-bg to-bg px-6">
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <img src="/icons/icon.svg" alt="" width={80} height={80} className="rounded-2xl shadow-lg" />
-          <h1 className="text-3xl font-bold">HomeMusic</h1>
+          <h1 className="text-3xl font-bold">WibeMusic</h1>
           <p className="text-sm text-muted">{SUBTITLE[mode]}</p>
         </div>
         <form onSubmit={submit} className="space-y-4">

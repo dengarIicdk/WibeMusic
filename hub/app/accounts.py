@@ -22,7 +22,7 @@ from app.config import get_settings
 from app.db import session_scope
 from app.google_auth import GoogleTokenError, verify_id_token
 from app.library.navidrome import AuthError, NavidromeAdmin, NavidromeUserExists
-from app.models import EmailCode, Invite, User, utcnow
+from app.models import AccessRequest, EmailCode, Invite, User, utcnow
 from app.security import decrypt
 
 log = logging.getLogger(__name__)
@@ -240,6 +240,84 @@ async def purge_email_codes() -> int:
     async with session_scope() as s:
         res = await s.execute(delete(EmailCode).where(EmailCode.created_at < utcnow() - timedelta(days=2)))
         return res.rowcount
+
+
+# --- access requests: the owner approves by a letter ------------------------------------------
+
+REQUEST_RESEND_S = 3600  # the same address asks again no sooner than this
+REQUEST_DAILY = 20  # requests to the owner a day at most
+
+
+async def request_access(email: str) -> None:
+    """Asks the owner, by letter, for an account for the address. The owner's links carry a one-time token."""
+    if not mailer.configured() or not get_settings().owner_email:
+        raise HTTPException(404, "Заявки на этом сервере не настроены")
+    email = normalize_email(email)
+    if len(email) > 320 or not EMAIL_RE.match(email):
+        raise HTTPException(400, "Проверьте адрес почты")
+    settings = get_settings()
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    now = utcnow()
+    async with session_scope() as s:
+        await _check_email_free(s, email)
+        recent = (await s.execute(select(func.max(AccessRequest.created_at)).where(
+            AccessRequest.email == email))).scalar_one()
+        if recent and (now - recent).total_seconds() < REQUEST_RESEND_S:
+            raise HTTPException(429, "Заявка с этой почты уже отправлена. Попробуйте позже")
+        today = (await s.execute(select(func.count(AccessRequest.id))
+                                 .where(AccessRequest.created_at >= now - timedelta(days=1)))).scalar_one()
+        if today >= REQUEST_DAILY:
+            raise HTTPException(503, "Сегодня заявок уже много. Попробуйте завтра")
+        row = AccessRequest(email=email, token_hash=token_hash)
+        s.add(row)
+        await s.flush()
+        row_id = row.id
+    base = settings.public_hub_url.rstrip("/")
+    text = (f"Запрос на аккаунт HomeMusic от: {email}\n\n"
+            f"Одобрить: {base}/api/auth/access/approve?t={token}\n"
+            f"Отклонить: {base}/api/auth/access/decline?t={token}\n")
+    try:
+        await mailer.send(settings.owner_email, f"Заявка на доступ: {email}", text)
+    except mailer.MailError as e:
+        async with session_scope() as s:
+            await s.execute(delete(AccessRequest).where(AccessRequest.id == row_id))
+        raise HTTPException(502, "Не удалось отправить заявку. Попробуйте позже") from e
+    log.info("access request from %s sent to owner", email)
+
+
+async def decide_access(token: str, approve: bool) -> str:
+    """The owner's link: approves (makes the account, letters its login and password to the address) or declines.
+    Returns a line for the owner's page."""
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    async with session_scope() as s:
+        row = (await s.execute(select(AccessRequest).where(AccessRequest.token_hash == token_hash))
+               ).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(404, "Ссылка не найдена")
+        if row.status != "pending":
+            return f"Заявка уже решена: {row.status}"
+        if not approve:
+            row.status, row.decided_at = "declined", utcnow()
+            return "Заявка отклонена"
+        username = f"u{secrets.token_hex(4)}"
+        password = secrets.token_urlsafe(9)
+        try:
+            async with NavidromeAdmin() as nd:
+                await nd.create_user(username, password, name=username)
+        except AuthError as e:
+            raise HTTPException(502, "Сервер музыки не принял учётную запись администратора") from e
+        row.status, row.decided_at = "approved", utcnow()
+        email = row.email
+    text = (f"Ваш аккаунт HomeMusic готов.\n\nЛогин: {username}\nПароль: {password}\n\n"
+            f"Войти: {get_settings().public_hub_url.rstrip('/')}\n")
+    try:
+        await mailer.send(email, "Ваш аккаунт HomeMusic", text)
+    except mailer.MailError as e:
+        log.error("account letter to %s not sent; the account exists", email)
+        raise HTTPException(502, "Аккаунт создан, но письмо не ушло. Проверьте почту сервера") from e
+    log.info("access approved for %s", email)
+    return "Заявка одобрена, учётные данные отправлены заявителю"
 
 
 async def username_for_login(s: AsyncSession, login: str) -> str:

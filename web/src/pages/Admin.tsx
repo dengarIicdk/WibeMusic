@@ -262,7 +262,7 @@ function CreateInviteSheet({ open, onClose, onCreated }: { open: boolean; onClos
 function inviteMessage(inv: InviteOut, hubUrl: string): string {
   const apk = `${hubUrl.replace(/\/$/, '')}/app/latest.apk`;
   return [
-    `Приглашение в HomeMusic${inv.note ? ` для: ${inv.note}` : ''}.`,
+    `Приглашение в WibeMusic${inv.note ? ` для: ${inv.note}` : ''}.`,
     `1. Установите приложение: ${apk}`,
     '2. На экране входа нажмите «Далее», затем «Регистрация по коду».',
     `3. Введите код ${inv.code} и придумайте имя и пароль.`,

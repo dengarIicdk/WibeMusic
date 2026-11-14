@@ -4,9 +4,9 @@ import { ApiError, UNAUTHORIZED_EVENT, api, errorMessage, invalidateCache } from
 import type { MeOut } from './api/types';
 import { MiniPlayer, PlayerSpacer } from './components/MiniPlayer';
 import { Overlays } from './components/Overlays';
-import { TabBar, type Tab } from './components/TabBar';
+import { Sidebar, TabBar, type Tab } from './components/TabBar';
 import { ErrorState, Spinner, cx } from './components/ui';
-import { STANDALONE } from './lib/embedded';
+import { EMBEDDED, STANDALONE } from './lib/embedded';
 import { hubEvents } from './lib/events';
 import { restoreListening, stopListening } from './lib/listen';
 import { restoreWave } from './lib/wave';
@@ -206,7 +206,7 @@ export function App() {
   const wide = route.path.startsWith('/admin/');
   return (
     <SessionContext.Provider value={{ me, logout }}>
-      <main className={cx('mx-auto min-h-dvh', wide ? 'max-w-6xl' : 'max-w-2xl', !fullPlayer && 'pb-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))]')}>
+      <main className={cx('mx-auto min-h-dvh', wide ? 'max-w-6xl' : 'max-w-2xl', !EMBEDDED && 'md:ml-56 md:mr-0 md:max-w-none md:px-8', !fullPlayer && 'pb-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))]')}>
         {resolved?.node}
         {!fullPlayer && <PlayerSpacer />}
       </main>
@@ -214,6 +214,7 @@ export function App() {
         <>
           <MiniPlayer />
           <TabBar active={resolved?.tab ?? null} last={lastByTab} />
+          <Sidebar active={resolved?.tab ?? null} last={lastByTab} />
         </>
       )}
       <Overlays />

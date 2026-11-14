@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "HomeMusic",
-  "short_name": "HomeMusic",
+  "name": "WibeMusic",
+  "short_name": "WibeMusic",
   "description": "Домашняя музыка: поиск, загрузки, библиотека и ИИ-ассистент",
   "lang": "ru",
   "dir": "ltr",

@@ -142,7 +142,7 @@ export function TrackRow({
       {number !== undefined || showCover ? (
         <span className={cx('relative flex h-12 shrink-0 items-center justify-center', number !== undefined ? 'w-7' : 'w-12')}>
           {number !== undefined ? (
-            <span className={cx('text-sm tabular-nums text-dim', rowPlays && 'group-hover/track:opacity-0 group-focus-within/track:opacity-0', rowPlays && current && 'opacity-0')}>{number}</span>
+            <span className={cx('text-sm tabular-nums text-dim', rowPlays && 'group-hover/track:opacity-0 group-focus-within/track:opacity-0', current && 'opacity-0')}>{number}</span>
           ) : <Cover src={track.cover_small_url || track.cover_url} size={48} alt="" />}
           {rowPlays && (
             <span aria-hidden="true" className={cx(
@@ -151,6 +151,13 @@ export function TrackRow({
               current ? 'opacity-100' : 'opacity-0',
             )}>
               {waiting ? <Spinner size={22} /> : <Icon name={playing ? 'pause' : 'play'} size={22} filled />}
+            </span>
+          )}
+          {number !== undefined && current && !waiting && (
+            <span aria-hidden="true" className={cx('equalizer pointer-events-none absolute inset-0 m-auto text-accent', phase !== 'playing' && 'paused')}>
+              <span />
+              <span />
+              <span />
             </span>
           )}
         </span>

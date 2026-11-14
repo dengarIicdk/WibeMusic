@@ -76,7 +76,16 @@ export function MiniPlayer() {
     <>
       <Cover src={track.cover_small_url || track.cover_url} size={44} alt="" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[15px] font-medium leading-tight">{track.title}</div>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-[15px] font-medium leading-tight">{track.title}</span>
+          {phase === 'playing' && (
+            <span aria-hidden="true" className="equalizer shrink-0 text-accent">
+              <span />
+              <span />
+              <span />
+            </span>
+          )}
+        </div>
         {status ? (
           <div className={cx('text-[13px] leading-tight', phase === 'error' ? 'line-clamp-2 text-danger' : 'truncate text-muted')}>{status}</div>
         ) : (
@@ -101,7 +110,7 @@ export function MiniPlayer() {
   );
 
   return (
-    <div ref={box} className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-40 mx-auto max-w-2xl px-2 pb-2" role="region" aria-label="Прослушивание">
+    <div ref={box} className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-40 mx-auto max-w-2xl px-2 pb-2 md:left-56 md:right-0 md:mx-0 md:max-w-none md:px-8 md:pb-3" role="region" aria-label="Прослушивание">
       <div className="anim-up overflow-hidden rounded-xl border border-line bg-raised/95 shadow-2xl backdrop-blur">
         <div className="flex items-center gap-2 py-1.5 pl-2 pr-1">
           {STANDALONE ? (

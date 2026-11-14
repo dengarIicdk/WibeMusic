@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WibeMusic — ваша музыка на своём сервере</title>
+  <meta name="description" content="WibeMusic: личная музыкальная библиотека на вашем ПК и Android. Установка одним файлом, без Docker." />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="#top"><img src="icons/icon.svg" alt="" width="28" height="28" />WibeMusic</a>
+    <nav>
+      <a href="#features">Возможности</a>
+      <a href="#install">Установка</a>
+      <a href="#android">Android</a>
+      <a class="btn btn-small" href="#download">Скачать</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="glow" aria-hidden="true"></div>
+      <p class="eyebrow">Музыка на вашем сервере</p>
+      <h1>Вся ваша музыка.<br /><span>Ваш сервер.</span></h1>
+      <p class="lead">
+        WibeMusic превращает папку с музыкой в красивый плеер для ПК, браузера и телефона.
+        Ставится одним файлом, без Docker и без настройки.
+      </p>
+      <div class="actions">
+        <a class="btn" href="#download">Скачать для Windows</a>
+        <a class="btn btn-ghost" href="#android">Android-версия</a>
+      </div>
+      <div class="player" aria-hidden="true">
+        <div class="cover"></div>
+        <div class="meta">
+          <strong>Ночной трек</strong>
+          <span>WibeMusic · Личная библиотека</span>
+          <div class="bar"><i></i></div>
+        </div>
+        <div class="dots"><b></b><b></b><b></b></div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <h2>Возможности</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Своя библиотека</h3>
+          <p>Работает с вашей папкой музыки. Поиск, альбомы, исполнители, плейлисты и избранное.</p>
+        </article>
+        <article class="card">
+          <h3>Умные подборки</h3>
+          <p>Волна, умное перемешивание и история прослушивания, которая подсказывает, что включить дальше.</p>
+        </article>
+        <article class="card">
+          <h3>Доступ с любого устройства</h3>
+          <p>Браузер, установка как приложение (PWA) и Android-клиент. Всё работает в домашней сети.</p>
+        </article>
+        <article class="card">
+          <h3>Приватность</h3>
+          <p>Музыка и данные остаются на вашем сервере. Никакой рекламы и отслеживания.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="install" class="section">
+      <h2>Установка на Windows</h2>
+      <ol class="steps">
+        <li><span>1</span><div><strong>Скачайте установщик</strong><p>Один файл <code>WibeMusic-Setup.exe</code>. Внутри уже есть всё нужное.</p></div></li>
+        <li><span>2</span><div><strong>Запустите и выберите параметры</strong><p>Можно добавить значок на рабочий стол и автозапуск при входе в Windows.</p></div></li>
+        <li><span>3</span><div><strong>Откройте WibeMusic</strong><p>Приложение откроется в браузере. Вход не нужен: это ваш компьютер.</p></div></li>
+      </ol>
+      <p class="note">Данные хранятся в <code>%LOCALAPPDATA%\WibeMusic</code>, музыка — в <code>Музыка\WibeMusic</code>.</p>
+    </section>
+
+    <section id="android" class="section">
+      <h2>Android</h2>
+      <p class="lead narrow">
+        Приложение открывает ваш сервер WibeMusic на телефоне. Укажите адрес один раз,
+        например адрес ПК в домашней сети или ваш домен.
+      </p>
+      <div class="actions">
+        <a class="btn" href="https://github.com/justman-1/HomeMusic-public/releases/latest">Скачать APK</a>
+      </div>
+      <p class="note">Установка APK: разрешите установку из неизвестных источников в настройках Android.</p>
+    </section>
+
+    <section id="download" class="section download">
+      <h2>Скачать</h2>
+      <p class="lead narrow">Установщик и APK публикуются на странице релизов GitHub.</p>
+      <div class="actions">
+        <a class="btn" href="https://github.com/justman-1/HomeMusic-public/releases/latest">Перейти к релизам</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>WibeMusic</span>
+    <span>Ваша музыка — на ваших устройствах</span>
+  </footer>
+</body>
+</html>

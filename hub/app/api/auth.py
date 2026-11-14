@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, Request, Response
+import html
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import accounts, auth, mailer
@@ -62,6 +65,20 @@ async def email_register(body: EmailRegisterIn, request: Request, response: Resp
     user, token = await accounts.register_by_email(s, body.email, body.code, body.username, body.password)
     auth.set_session_cookie(request, response, token)
     return me_out(user)
+
+
+@router.post("/access")
+async def access_request(body: EmailCodeIn):
+    await accounts.request_access(body.email)
+    return {"ok": True}
+
+
+@router.get("/access/{decision}", response_class=HTMLResponse)
+async def access_decide(decision: str, t: str):
+    if decision not in ("approve", "decline"):
+        raise HTTPException(404)
+    text = await accounts.decide_access(t, approve=decision == "approve")
+    return HTMLResponse(f"<!doctype html><meta charset=utf-8><p>{html.escape(text)}</p>")
 
 
 @router.post("/google", response_model=GoogleLoginOut)

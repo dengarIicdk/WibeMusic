@@ -65,7 +65,7 @@ export function SharePage() {
           <p className="text-muted">{phase.text}</p>
         </div>
       ) : phase.kind === 'empty' ? (
-        <Empty icon="sparkle" title="Нечего обрабатывать" text="Поделитесь скриншотом, аудиофайлом или ссылкой из другого приложения и выберите HomeMusic.">
+        <Empty icon="sparkle" title="Нечего обрабатывать" text="Поделитесь скриншотом, аудиофайлом или ссылкой из другого приложения и выберите WibeMusic.">
           <Button small onClick={() => navigate('/assistant', { replace: true })}>
             К ассистенту
           </Button>

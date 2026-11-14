@@ -46,3 +46,7 @@ PROGRESS.md
 OPTIMIZE-TODO.md
 OPTIMIZE-DONE.md
 design-review/
+
+# built installers (large, published as release assets)
+desktop/dist/
+

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import timedelta
 from time import monotonic
 
@@ -97,8 +98,31 @@ async def logout(s: AsyncSession, request: Request, response: Response) -> None:
     response.delete_cookie(COOKIE, path="/")
 
 
+def _local_autologin(request: Request) -> bool:
+    """Desktop build only: a direct request from this PC to localhost counts as the admin account.
+
+    Off unless WIBEMUSIC_LOCAL_AUTOLOGIN=1. A proxied request (Caddy adds X-Forwarded-For) never qualifies.
+    """
+    if os.environ.get("WIBEMUSIC_LOCAL_AUTOLOGIN") != "1":
+        return False
+    if request.client is None or request.client.host not in ("127.0.0.1", "::1"):
+        return False
+    if any(h in request.headers for h in ("x-forwarded-for", "x-real-ip", "forwarded", "cf-connecting-ip")):
+        return False
+    return (request.headers.get("host") or "").split(":")[0] in ("localhost", "127.0.0.1")
+
+
 async def current_user(request: Request, s: AsyncSession = Depends(get_session, scope="function")) -> User:
     token = request.cookies.get(COOKIE)
+    if not token and _local_autologin(request):
+        admin_name = os.environ.get("NAVIDROME_ADMIN_USER", "admin")
+        user = (await s.execute(select(User).where(
+            User.nd_username == admin_name, User.is_admin.is_(True)
+        ))).scalar_one_or_none()
+        if user is None:
+            user, _ = await login(s, admin_name, os.environ.get("NAVIDROME_ADMIN_PASSWORD", ""))
+        await s.commit()
+        return user
     if not token:
         raise HTTPException(401, "Требуется вход")
     sess = await s.get(Session, hash_token(token))

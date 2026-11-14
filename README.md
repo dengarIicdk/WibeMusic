@@ -54,6 +54,14 @@ API Хаба — [hub/API.md](hub/API.md).
    ```
    docker compose up -d --build
    ```
+   Без `COMPOSE_PROFILES` поднимаются только navidrome, hub и youtube-pot. Остальные сервисы включаются профилями
+   в `.env` (через запятую, пример `COMPOSE_PROFILES=gpu,vps`; пустое значение — обычная локальная установка):
+   - `gpu` — embedder (звуковые векторы для миксов, нужна видеокарта NVIDIA; без неё миксы работают без «похожести по звуку»);
+   - `vps` — туннель к вашему VPS (только для доступа снаружи домашней сети; нужен `VPS_HOST` в `.env`);
+   - `soulseek` — контейнер slskd (см. раздел «Soulseek»).
+
+   **Важно при обновлении:** если в `.env` уже задан `COMPOSE_PROFILES`, добавьте в него `vps` (туннель) и `gpu` (embedder),
+   иначе после пересоздания эти контейнеры перестанут запускаться.
 7. Первый запуск Navidrome: админ создаётся в веб-интерфейсе `http://localhost:4533` (или его уже создал установщик —
    логин/пароль в `.env`: `NAVIDROME_ADMIN_USER` / `NAVIDROME_ADMIN_PASSWORD`). Остальных пользователей заводит админ
    в Navidrome → «Пользователи».
@@ -266,7 +274,8 @@ Navidrome 500 px вместо исходных. «Микс дня на теле�
 Источник lossless-файлов для загрузок в библиотеку через [slskd](https://github.com/slskd/slskd). **По умолчанию
 выключен**: Хаб включает его, только когда в `.env` заданы все три значения — `SLSKD_API_KEY` (любая случайная строка,
 например `openssl rand -hex 24`), `SLSKD_SLSK_USERNAME` и `SLSKD_SLSK_PASSWORD` (новый логин регистрируется сам при
-первом входе). Контейнер slskd запускается с профилем: `COMPOSE_PROFILES=soulseek` в `.env`, затем `docker compose up -d`.
+первом входе). Контейнер slskd запускается с профилем: добавьте `soulseek` в `COMPOSE_PROFILES` в `.env`
+(например, `COMPOSE_PROFILES=gpu,vps,soulseek`), затем `docker compose up -d`.
 
 - Каждая загрузка в библиотеку (кнопка, ♥, импорт, Микс дня, Моя волна) сначала ищет файл на Soulseek и берёт его,
   только если он лучше обычных источников: по умолчанию **только FLAC** (`soulseek.format` в `config.yaml`). Не нашёл,
@@ -391,7 +400,8 @@ curl http://localhost:8080/healthz
 файла библиотеки или превью Deezer) и текст в векторы одного пространства; Хаб сравнивает по ним кандидатов миксов
 и «Моей волны» со вкусом пользователя. API — [hub/API.md](hub/API.md).
 
-- **Запуск:** `docker compose up -d --build embedder`, затем `docker image prune -f` (прежний образ — ~7 ГБ — иначе остаётся
+- **Запуск:** сервис в профиле `gpu` (добавьте `gpu` в `COMPOSE_PROFILES` в `.env`), затем
+  `docker compose up -d --build embedder`; `docker image prune -f` (прежний образ — ~7 ГБ — иначе остаётся
   без имени). Порт наружу не открыт: Хаб ходит в `http://embedder:8090`
   (`EMBEDDER_URL` в `.env`; `EMBEDDER_TOKEN` — по желанию, тот же в обоих сервисах).
 - **Первая загрузка весов:** при первом задании (или `POST /text`) сервис скачивает с Hugging Face ~2,5 ГБ в том

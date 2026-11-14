@@ -8,8 +8,8 @@
   --color-fg: #f2f2f2;
   --color-muted: #a8a8a8;
   --color-dim: #6e6e6e;
-  --color-accent: #1ed760;
-  --color-accent-strong: #1db954;
+  --color-accent: #2dd4bf;
+  --color-accent-strong: #14b8a6;
   --color-danger: #f26b63;
   --color-warn: #f2b84b;
   --color-info: #5aa9f0;
@@ -29,6 +29,11 @@
   --tabbar-h: 64px; /* TabBar height; fixed bottom bars sit above it */
   /* --player-h: MiniPlayer height while it shows (set by it); fixed bottom bars sit above it too */
 }
+@media (min-width: 768px) {
+  :root {
+    --tabbar-h: 0px; /* wide screens: the sidebar replaces the tab bar */
+  }
+}
 :root.hm-embedded {
   --tabbar-h: 0px; /* inside the Android app: no PWA tab bar */
   /* the app's own background (sent by the app as --hm-bg): no seam at its status bar and players */
@@ -44,8 +49,8 @@
   --color-fg: #181d18;
   --color-muted: #535b53;
   --color-dim: #737c73;
-  --color-accent: #006e2d;
-  --color-accent-strong: #005320;
+  --color-accent: #00796b;
+  --color-accent-strong: #005f54;
   --color-danger: #ba1a1a;
   --color-warn: #845400;
   --color-info: #00629d;
@@ -150,6 +155,37 @@
   }
   .no-scrollbar {
     scrollbar-width: none;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 32px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 32px), transparent 100%);
+  }
+  .no-scrollbar > * {
+    scroll-snap-align: start;
+  }
+  .equalizer {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+  }
+  .equalizer > span {
+    width: 3px;
+    height: 100%;
+    border-radius: 1px;
+    background: currentColor;
+    transform-origin: bottom;
+    animation: hm-eq 0.9s ease-in-out infinite;
+  }
+  .equalizer > span:nth-child(2) {
+    animation-delay: -0.3s;
+  }
+  .equalizer > span:nth-child(3) {
+    animation-delay: -0.6s;
+  }
+  .equalizer.paused > span {
+    animation-play-state: paused;
+    transform: scaleY(0.35);
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -174,6 +210,16 @@
 }
 .anim-up {
   animation: hm-fade-up 0.18s ease-out;
+}
+
+@keyframes hm-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 
 @keyframes hm-shimmer {

@@ -396,7 +396,7 @@ function TrackEditSheet({ track, onClose, onSaved }: { track: LibTrackOut | null
           </Field>
         </div>
         <label className="flex min-h-11 items-center gap-3">
-          <input type="checkbox" className="h-5 w-5 accent-[#1ed760]" checked={explicit} onChange={(e) => setExplicit(e.target.checked)} />
+          <input type="checkbox" className="h-5 w-5 accent-accent" checked={explicit} onChange={(e) => setExplicit(e.target.checked)} />
           <span>Explicit (18+)</span>
         </label>
         {track && <p className="break-all text-xs text-dim">{track.path}</p>}

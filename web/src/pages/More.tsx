@@ -107,11 +107,11 @@ export function MorePage() {
           onClick={perm === 'default' ? enableNotifications : undefined}
           right={perm === 'granted' ? <Icon name="check" size={20} className="text-accent" /> : undefined}
         />
-        {canInstall && !standalone && <Item icon="install" title="Установить приложение" sub="На домашний экран, с «Поделиться» → HomeMusic" onClick={install} />}
+        {canInstall && !standalone && <Item icon="install" title="Установить приложение" sub="На домашний экран, с «Поделиться» → WibeMusic" onClick={install} />}
         <Item icon="logout" title="Выйти" onClick={doLogout} danger />
       </ul>
 
-      <p className="px-6 py-6 text-center text-xs text-dim">HomeMusic · личный музыкальный сервис</p>
+      <p className="px-6 py-6 text-center text-xs text-dim">WibeMusic · личный музыкальный сервис</p>
     </div>
   );
 }

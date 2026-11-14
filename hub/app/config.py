@@ -184,6 +184,8 @@ class Settings(BaseSettings):
     # letters a day at most (Gmail sends about 500): past it registration asks to try tomorrow
     email_daily_limit: int = 450
     email_code_minutes: int = 15
+    # the owner: access requests come to this address, and approval links in its letters lead to public_hub_url
+    owner_email: str = ""
     log_level: str = "INFO"
 
     llm_base_url: str = "https://openrouter.ai/api/v1"

@@ -37,7 +37,7 @@ export function HomePage() {
           <WaveCard />
         </>
       )}
-      <div className="grid grid-cols-2 gap-2 px-4 pt-3">
+      <div className="grid grid-cols-2 gap-2 px-4 pt-3 md:grid-cols-4">
         <Shortcut to="/liked" icon="heart" title="Понравившиеся" />
         <Shortcut to="/playlists" icon="playlist" title="Плейлисты" />
         <Shortcut to="/artists" icon="user" title="Исполнители" />
@@ -62,6 +62,16 @@ export function HomePage() {
           <AlbumRow title="Часто слушаете" albums={d.frequent} rowKey="home:frequent" />
           <AlbumRow title="Понравившиеся альбомы" albums={d.starred} rowKey="home:starred" more="/liked" />
           <AlbumRow title="Новое в библиотеке" albums={d.newest} rowKey="home:newest" more="/lib/albums" />
+          {!d.radio.length && !d.recent.length && !d.frequent.length && !d.starred.length && !d.newest.length && (
+            <section className="mx-4 mt-6 rounded-xl bg-surface p-5 text-center" aria-label="Библиотека пуста">
+              <h2 className="text-lg font-semibold">Пока здесь пусто</h2>
+              <p className="mt-1 text-sm text-muted">Найдите музыку или загрузите свои файлы — и здесь появятся альбомы и волны.</p>
+              <div className="mt-4 flex justify-center gap-2">
+                <Link to="/search" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent">Найти музыку</Link>
+                <Link to="/upload" className="rounded-full bg-raised px-5 py-2.5 text-sm font-semibold text-fg hover:bg-hover">Загрузить файлы</Link>
+              </div>
+            </section>
+          )}
         </>
       ) : null}
     </div>
