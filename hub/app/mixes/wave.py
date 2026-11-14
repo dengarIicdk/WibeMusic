@@ -74,6 +74,10 @@ TITLES = {"seed": "С чего началась волна", SESSION_RADIO: "П�
           ARTIST_SONGS: "Песни исполнителя"}
 IDLE = timedelta(hours=24)  # a session not asked for this long is over
 KEEP = timedelta(days=7)  # ... and this long: its state is cleared to a summary (`CLEARED_KEYS`), the row stays
+# A new session starts knowing what the user played lately (the events of `PlayEvent`), so its first picks do not
+# repeat what the previous session — or the player outside it — already played.
+RECENT_DAYS = 30
+RECENT_MAX = 4000  # newest events read for that memory
 CLEARED_KEYS = ("version", "taste_model", "gens", "started", "started_familiar", "skips", "seeds_used", "downloads")
 EMBED_NEW = 60  # new candidates without a vector whose previews go to the embedder per refill
 VECTORS_TOP = 80  # best candidates whose vectors are asked for the session's sound centers
@@ -103,6 +107,34 @@ def cand_of(d: dict[str, Any]) -> build.Cand:
 
 def fp_of(c: build.Cand) -> str:
     return fingerprint(c.track.artist, c.track.title)
+
+
+async def recent_fingerprints(user_id: int) -> set[str]:
+    """Fingerprints of what the user played in the last `RECENT_DAYS`, whatever session played it: a new wave
+    starts with them in `heard`, so it does not hand the same songs out again (the repeat complaint)."""
+    from app.matching.normalize import fingerprint as _fp
+    from app.models import PlayEvent as _PlayEvent
+
+    since = utcnow() - timedelta(days=RECENT_DAYS)
+    async with session_scope() as s:
+        rows = (await s.execute(select(_PlayEvent.ref, _PlayEvent.track_metadata)
+                                .where(_PlayEvent.user_id == user_id, _PlayEvent.ts >= since,
+                                       _PlayEvent.kind.in_(PLAY_KINDS),
+                                       (PlayEvent.target_type == "track"))
+                                .order_by(_PlayEvent.ts.desc()).limit(RECENT_MAX))).all()
+    out: set[str] = set()
+    for _ref, meta in rows:
+        if not isinstance(meta, dict):
+            continue
+        title = meta.get("title")
+        artist = meta.get("artist_credit")
+        if not artist:
+            names = meta.get("artists")
+            if isinstance(names, list) and names and isinstance(names[0], dict):
+                artist = names[0].get("name")
+        if isinstance(artist, str) and isinstance(title, str) and artist and title:
+            out.add(_fp(artist, title))
+    return out
 
 
 @dataclass
@@ -339,6 +371,12 @@ async def absorb(rt: Runtime, results: list[build.GenResult]) -> int:
         await _sound(p, kept)
     for c in kept:
         c.score = build.score(c, weights(), p)
+    # Candidates of equal value enter the pool in a shuffled order, so the ranked order of a full pool is not always
+    # the sources' own order: two sessions over the same sources hand out different tracks. The seed is the session's
+    # own progress, so asking again about an unchanged session still ranks the same way (`pick` needs that to give
+    # the client back its queue unchanged).
+    random.Random(f"{st.started}:{len(st.pool)}:{len(kept)}").shuffle(kept)
+    for c in kept:
         st.pool[c.track.ref] = c
     return len(kept)
 
@@ -585,7 +623,9 @@ def pick(st: State, p: Profile, mode: str, vectors: dict[str, list[float]], n: i
          values: dict[str, float] | None = None, lang: str | None = None) -> list[build.Cand]:
     """The next `n`: the best by `value` keeping the mode's familiar share, an artist at most once in `ARTIST_GAP`
     tracks (counting the played ones; the artist of a wave by an artist — once in `SEED_ARTIST_GAP`); with nothing else left, the gap gives way (never the same artist twice in a
-    row). «Не нравится» set since the candidate came in drops it. `queued` — refs the client has ahead already.
+    row). The order between sessions varies (`absorb` shuffles equal candidates); asking again about an
+    unchanged session answers the same.
+    «Не нравится» set since the candidate came in drops it. `queued` — refs the client has ahead already.
     `values` gets the `value` of every candidate ranked, by ref (the analytics of `wave_items`)."""
     pos = _weighted_center(st.positive_weights, vectors) if st.taste_model == "v2" else _center(st.pos, vectors)
     neg = None if st.taste_model == "v2" else _center(st.neg, vectors)
@@ -989,6 +1029,8 @@ async def start(user: User, seed: dict[str, Any] | None, mode: str | None, *, la
             raise WaveError(409, "Волне не от чего оттолкнуться: послушайте что-нибудь или выберите исполнителей")
     sid = uuid.uuid4().hex[:16]
     rt = Runtime(user_id=user.id, mode=mode, state=State(taste_model=cfg.taste_model, lang=lang), profile=profile, lang=lang)
+    # What the user played lately (any session, any player) is not handed out again by this new wave.
+    rt.state.heard.update(await recent_fingerprints(user.id))
     rt.state.seeds_used = [t.key for t in seeds]
     rt.state.seed_artist = artist_key(seed_artist["name"]) if seed_artist else None
     seed_json = ({"ref": seed_track.ref, "artist": seed_track.artist, "title": seed_track.title} if seed_track

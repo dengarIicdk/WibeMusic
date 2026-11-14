@@ -61,7 +61,7 @@ export function PlayerPage() {
   const waiting = phase === 'resolving' || phase === 'loading';
   const playing = phase === 'playing' || waiting;
   const owned = info?.kind === 'library';
-  const source = info?.kind === 'full' ? providerLabel(info.provider) : owned ? 'из библиотеки' : info?.kind === 'preview' ? 'превью 30 сек' : null;
+  const source = info?.kind === 'full' ? providerLabel(info.provider) : owned ? 'из библиотеки' : null;
   const shownPos = scrub ?? Math.min(position, duration || position);
   const pct = duration ? Math.min(100, (shownPos / duration) * 100) : 0;
   const commit = () => {

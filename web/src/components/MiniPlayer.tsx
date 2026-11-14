@@ -101,7 +101,6 @@ export function MiniPlayer() {
                 <Icon name="sparkle" size={14} />
               </span>
             )}
-            {info?.kind === 'preview' && <span className="shrink-0 rounded bg-warn/15 px-1 text-[11px] font-semibold text-warn">превью 30 сек</span>}
             <span className="truncate">{[track.artist, source].filter(Boolean).join(' · ')}</span>
           </div>
         )}

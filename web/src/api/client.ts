@@ -424,7 +424,9 @@ export const api = {
 export const libraryCoverUrl = (albumId: number, size = 300, bust?: string | number) =>
   withQuery(`/api/library/albums/${albumId}/cover`, { size, v: bust });
 
-/** Audio of a catalog track for `<audio src>`; the Hub picks the file on the first request if needed. */
-export const listenStreamUrl = (ref: string) => withQuery('/api/listen/stream', { ref });
+/** Audio of a catalog track for `<audio src>`; the Hub picks the file on the first request if needed.
+ * `full=1` forbids a 30 s source preview: a track no source has whole does not play at all (`404`) instead of
+ * sounding like a short excerpt with a «превью 30 сек» label. */
+export const listenStreamUrl = (ref: string) => withQuery('/api/listen/stream', { ref, full: '1' });
 
 export const uploadCoverUrl = (uploadId: number) => `/api/uploads/${uploadId}/cover`;

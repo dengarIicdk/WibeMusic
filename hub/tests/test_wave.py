@@ -8,6 +8,7 @@ test_mix_sources.py); Navidrome is the mock of test_mixes.py.
 
 from __future__ import annotations
 
+import random
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -19,6 +20,7 @@ from sqlalchemy import select
 
 from app.catalog.models import CatalogTrack
 from app.mixes import build, wave
+from app.mixes.wave import RECENT_DAYS
 from app.mixes.taste import Profile, artist_key
 from tests.support import FakeDeezer, app_client
 from tests.test_mixes import ND, add_user, history, user_id
@@ -775,3 +777,68 @@ async def test_launch_fields_of_the_wave_events_are_stored(env, monkeypatch) -> 
     async with session_scope() as s:
         row = (await s.execute(select(PlayEvent).where(PlayEvent.event_id == e["event_id"]))).scalar_one()
     assert (row.context, row.launch_id, row.launch_origin) == (f"wave:{sid}", f"wave:{sid}", "wave")
+
+
+async def test_a_new_wave_starts_knowing_what_was_played_lately(env, monkeypatch) -> None:
+    """The repeat complaint: a session started later carries the fingerprints of what the user played in the last
+    days, so its pool never offers those songs again — even though the previous session's `heard` is gone."""
+    from app.db import session_scope
+    from app.models import PlayEvent
+    from app.matching.normalize import fingerprint
+
+    me = env["admin"]
+    await history(me)
+    fake_sources(monkeypatch, [tr(5000 + i, f"Арт {i}") for i in range(12)])
+    async with session_scope() as s:
+        s.add(PlayEvent(user_id=me, event_id=uuid.uuid4().hex, ts=datetime.now(UTC).replace(tzinfo=None),
+                        kind="start", ref="dz:5003", client="pwa",
+                        track_metadata={"title": tr(5003).title, "artist_credit": tr(5003).artist}))
+
+    wave._rt.clear()  # a fresh session, nothing of the previous one in memory
+    w = (await env["client"].post("/api/wave/start", json={})).json()
+
+    sid = w["session_id"]
+    heard = wave._rt[sid].state.heard
+    assert fingerprint(tr(5003).artist, tr(5003).title) in heard
+    assert "dz:5003" not in [t["ref"] for t in w["tracks"]]
+
+
+async def test_recent_fingerprints_reads_artist_and_title_from_metadata(env) -> None:
+    from app.db import session_scope
+    from app.models import PlayEvent
+    from app.matching.normalize import fingerprint
+
+    me = env["admin"]
+    old = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=RECENT_DAYS + 5)
+    async with session_scope() as s:
+        s.add(PlayEvent(user_id=me, event_id=uuid.uuid4().hex, ts=datetime.now(UTC).replace(tzinfo=None),
+                        kind="start", ref="dz:1", client="pwa",
+                        track_metadata={"title": "Группа крови", "artist_credit": "Кино"}))
+        # the artists list is the fallback when artist_credit is absent
+        s.add(PlayEvent(user_id=me, event_id=uuid.uuid4().hex, ts=datetime.now(UTC).replace(tzinfo=None),
+                        kind="finish", ref="dz:2", client="pwa",
+                        track_metadata={"title": "Звезда", "artists": [{"name": "Кино"}]}))
+        # too old: not part of the memory
+        s.add(PlayEvent(user_id=me, event_id=uuid.uuid4().hex, ts=old, kind="start", ref="dz:3", client="pwa",
+                        track_metadata={"title": "Старое", "artist_credit": "Кино"}))
+
+    got = await wave.recent_fingerprints(me)
+
+    assert fingerprint("Кино", "Группа крови") in got
+    assert fingerprint("Кино", "Звезда") in got
+    assert fingerprint("Кино", "Старое") not in got
+
+
+def test_equal_candidates_enter_the_pool_in_a_shuffled_order() -> None:
+    """Two sessions over the same sources don't hand out the same order: the pool of equal candidates is shuffled
+    by the session's own progress (so asking again about an unchanged session still answers the same)."""
+    def order(started: int) -> list[str]:
+        st = state(*[cand(5000 + i) for i in range(30)])
+        kept = [*st.pool.values()]
+        random.Random(f"{started}:0:{len(kept)}").shuffle(kept)
+        st.pool = {c.track.ref: c for c in kept}
+        return [c.track.ref for c in wave.pick(st, profile(), "discover", {}, n=5)]
+
+    orders = {tuple(order(s)) for s in range(6)}
+    assert len(orders) > 1
+    assert order(3) == order(3)

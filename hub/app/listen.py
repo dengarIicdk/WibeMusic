@@ -546,11 +546,12 @@ async def _worker() -> None:
 
 
 async def _warm(ref: str) -> None:
-    """Pick the file and open it once, so a tap streams at once."""
+    """Pick the file and open it once, so a tap streams at once. Full songs only: a prefetch must never put a
+    30 s preview into the picks, or the tap that follows would play it."""
     try:
-        c = await choose(ref, background=True)
+        c = await choose(ref, background=True, full_only=True)
         if c.kind == "full" and c.source is None and not await _opens(c):
-            await choose(ref, background=True, stale=c)
+            await choose(ref, background=True, stale=c, full_only=True)
     except ListenError as e:
         log.info("listen prefetch %s: %s", ref, e)
         _missed[ref] = time.monotonic() + (MISS_TTL_S if e.status == 404 else TRANSIENT_TTL_S)

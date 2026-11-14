@@ -2,48 +2,46 @@
 
 - Обновлено: 2026-11-14 (+03:00).
 - Корень: `WibeMusic/` относительно папки с промптом (`Documents/Проект по умолчанию/WibeMusic`).
-- Upstream: https://github.com/justman-1/HomeMusic-public.git (`origin`, не пушить); база проекта `509bb43dfb67c57fe515c0cf765a8e6c85132bdc`.
-- Публикация: remote `wibemusic` — https://github.com/dengarIicdk/WibeMusic.git.
-- Ветка / HEAD: master / `39538e7439b8a3199f04e65f3c64f490e7fd090c`; до текущей работы `wibemusic/master` был `33fefcb` (на один коммит позади).
-- Этап / подзадача / статус: S09 / S09-T01 / DONE (CI, README и установщик пересобраны; Android — только через CI).
+- Upstream: https://github.com/justman-1/HomeMusic-public.git (`origin`, не пушить); remote для публикации — `wibemusic`.
+- Ветка / HEAD: master / `35e5d51607073f52589dba67e0351543956fa592` (S09-T01 отправлен в `wibemusic/master`). Изменения S10-T01 локальные, не закоммичены.
+- Этап / подзадача / статус: S10 / S10-T01 / DONE (автотесты и сборка; живое прослушивание в браузере не проверялось).
 
-## Выполнено
+## Выполнено (S10-T01)
 
-- Прежние изменения «Мой Вайб», запрета 30-секундных превью и Deezer-подборок (S08-T01) сохранены, ничего не сбрасывалось.
-- S09-T01: добавлены GitHub Actions — `checks.yml` (web build + Hub pytest, Ruff в режиме report-only), `windows-installer.yml` (production web build → Inno Setup → EXE), `android.yml` (JDK 17 + Gradle 8.9 → debug APK); на version tag сборки прикладываются к GitHub Release.
-- `README.md` переписан по фактическому поведению: Windows — установщик, затем «Пуск» → WibeMusic, интерфейс `http://localhost:8080`, Navidrome `http://localhost:4533`, пароль `admin` в `%LOCALAPPDATA%\WibeMusic\secrets.json`, музыка в `%USERPROFILE%\Music\WibeMusic\library`, сканирование раз в час. Android описан как WebView-клиент без собственного сервера (API 24+, debug-подпись).
-- `mobile/README.md` фиксирует отсутствие Gradle wrapper и сборку через CI.
-- `.gitignore`: `web/tsconfig.tsbuildinfo` (и прежний `desktop/dist/`).
+- **Превью 30 секунд убраны.** Запрет `full_only` в Hub работал, но фронтенд не передавал `full`: теперь `listenStreamUrl` шлёт `full=1`, `_warm()` прогревает только полные версии (превью больше не закрепляется в кэше `_choices`), метка «превью 30 сек» удалена из `MiniPlayer` и `Player`, а трек без полной версии показывает «Полной версии трека нет ни в одном источнике».
+- **Повторы снижены.** `recent_fingerprints()` читает `PlayEvent` за 30 дней (`artist_credit`, запасной `artists[0].name`) и при старте волны кладёт их в `heard`, поэтому новая сессия не выдаёт недавно сыгранное (прежде память жила только внутри сессии: `IDLE` 24 ч её закрывает).
+- **Порядок варьируется.** `absorb()` перемешивает равных кандидатов с seed от прогресса сессии: разные сессии дают разный порядок, повторный запрос по неизменённой сессии возвращает очередь как была.
 
 ## Последние проверки
 
-- `web/`: `npm run build` — typecheck и Vite production build прошли (15:20); `hub/app/static` обновлён (`index-COjWPlNM.js`, 602 кБ). Вложенному `npm run typecheck` нужен явный PATH с `/c/Program Files/nodejs`.
-- Установщик пересобран: `desktop/dist/WibeMusic-Setup.exe` — 185 788 913 байт, 15:27 (прежний артефакт от 12:16 устарел). Сборка через `desktop/build-installer.ps1 -Uv <uv.exe>` завершилась с кодом 0.
-- Содержимое EXE подтверждено тихой установкой во временный каталог: в установленном дереве `hub\app\static\index.html` ссылается на `index-COjWPlNM.js`, файл побайтно совпадает со свежей сборкой (SHA-256 `33b63ee6…fd14d68`) и содержит «Мой Вайб». Тестовая установка удалена, следов в автозапуске нет.
-- YAML всех workflow разбирается; у шага Ruff `continue-on-error: true`.
-- Ранее: Hub pytest на Multipass — 1076 passed, 74 skipped. Полный Ruff падает на существующих замечаниях проекта; массовая правка чужих файлов не выполнялась.
+- `hub/`: полный набор — **1086 passed, 74 skipped** (2026-11-14), три теста новые.
+- `hub/`: `test_wave.py` — 46 passed; `test_wave` + `test_listen` — 82 passed; миксы (`test_mixes`, `test_mix_build`, `test_mix_sources`) — 79 passed.
+- `web/`: `npm run build` — typecheck и production build прошли; `hub/app/static` обновлён (`index-B9fbGbPR.js`).
+- Ruff: `app/mixes/wave.py` — чисто; в `app/listen.py` остаются 3 прежних замечания (строки 33, 617), не связанные с этой правкой и не исправлявшиеся.
+- Установщик пересобран: `desktop/dist/WibeMusic-Setup.exe`, 185 786 122 байт, 16:03. Проверен тихой установкой: внутри `hub/app/static/assets/index-B9fbGbPR.js`, в нём `listen/stream`,{ref:e,full:`1`}`, метки «превью 30 сек» нет. Тестовая установка удалена, автозапуск не остался.
 
 ## Блокеры и ограничения
 
-- Android APK локально не собран: нет Android SDK и Gradle. Проверка — только GitHub Actions; release-keystore не настроен.
-- Живой запуск установленного клиента (меню «Пуск» → WibeMusic, браузер, воспроизведение) не выполнялся — проверено только содержимое установленного дерева.
-- Полная браузерная приёмка подборок по-прежнему требует тестовой сессии; credentials в файлы не сохранялись.
-- Не использовать `701288.myvds.top` и другие чужие адреса из исторической документации.
+- Живое прослушивание в браузере не проверялось: нужен вход и реальные источники. Не подтверждено на слух, что повторы ушли.
+- Треки без полной версии теперь не играют вовсе — это и есть запрошенный отказ от превью.
+- Каталог Deezer даёт ограниченный набор популярного; память прослушанного снижает повторы, но не устраняет их полностью.
+- Android APK собирается только в GitHub Actions (нет локального SDK/Gradle).
+- Не использовать `701288.myvds.top` и чужие адреса из исторической документации.
 
 ## Следующее действие
 
-1. Отправить `master` в remote `wibemusic` (никогда не в `origin`) и проверить результат запусков `Checks`, `Windows installer` и `Android APK` в GitHub Actions.
-2. После зелёного `Android APK` скачать artifact APK и проверить установку на устройстве.
-3. При необходимости релиза — поставить version tag `v*`; без прямой просьбы тег не создавать.
+1. Установить свежий `desktop/dist/WibeMusic-Setup.exe` («Пуск» → WibeMusic) и проверить в браузере `http://localhost:8080`: «Мой Вайб» не повторяет недавно сыгранное; трек без полной версии показывает сообщение вместо 30 секунд.
+2. Закоммитить S10-T01 и отправить в `wibemusic` (не в `origin`).
 
 ## История среды
 
-- Multipass `wibemusic` (Ubuntu 24.04, Docker), текущий IP проверять `multipass list`; при последней проверке — `172.27.160.225`.
-- `uv` в PATH отсутствовал; использован `%APPDATA%\Python\Python315\Scripts\uv.exe`. Кэш загрузок сборки: `%LOCALAPPDATA%\Temp\opencode\build\installer`.
+- Тестовое окружение Hub: `hub/.venv` (создано `uv sync --frozen --group dev`); в Windows-venv нужен пакет `tzdata`, иначе `ZoneInfo('Europe/Moscow')` падает.
+- `uv` в PATH отсутствует; используется `%APPDATA%\Python\Python315\Scripts\uv.exe`. Кэш сборки установщика: `%LOCALAPPDATA%\Temp\opencode\build\installer`.
+- Multipass `wibemusic` (Ubuntu 24.04, Docker); текущий IP проверять `multipass list`.
 
 ## Читать дальше
 
 - `docs/IMPLEMENTATION-PLAN.md`
-- `docs/progress/steps/S09-T01.md`
+- `docs/progress/steps/S10-T01.md`, `docs/progress/steps/S09-T01.md`
 - `docs/DECISIONS.md` (D004), `JOURNAL.md`
 - `../WibeMusic-PROMPT.md`

@@ -378,7 +378,15 @@ function start(queue: readonly ListenTrack[], index: number, auto = false, posit
   api.listen(track.ref, ctl.signal).then(
     (info) => {
       if (resolving !== ctl) return;
-      set({ info, duration: info.kind === 'preview' ? (info.duration_s ?? 30) : state.duration });
+      // `full=1` on the stream: a 30 s preview is never played. Say why the track stays silent instead.
+      if (info.kind === 'preview') {
+        if (auto && hasNext(state)) return void start(state.queue, state.index + 1, true);
+        a.pause();
+        a.removeAttribute('src');
+        set({ phase: 'error', error: 'Полной версии трека нет ни в одном источнике' });
+        return;
+      }
+      set({ info, duration: state.duration });
       reportStart();
       prefetchNext();
     },
